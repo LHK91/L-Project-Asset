@@ -607,7 +607,8 @@ body {
             </select>
             <button class="btn" onclick="App.fetchAllPrices()" id="btnRefresh">🔄 시세 갱신</button>
             <button class="btn" onclick="App.openModal('importExport')">💾 백업</button>
-            <span class="status-badge"><span class="status-dot"></span>시스템 정상</span>
+            <button class="btn" onclick="App.openModal('sync')" style="color:var(--accent-blue);border-color:var(--accent-blue);">☁️ 동기화</button>
+            <span class="status-badge" id="syncStatusBadge"><span class="status-dot"></span>로컬 모드</span>
         </div>
     </header>
 
@@ -890,6 +891,33 @@ body {
     </div>
 </div>
 
+<!-- ============ CLOUD SYNC MODAL ============ -->
+<div class="modal-overlay" id="modalSync">
+    <div class="modal">
+        <h2>☁️ 클라우드 동기화 (GitHub Gist)</h2>
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:20px;line-height:1.5;">
+            GitHub의 비공개 메모장(Gist)을 데이터베이스처럼 사용하여 여러 기기에서 완벽하게 데이터를 연동할 수 있습니다.<br>
+            <strong>다른 사람에게 링크를 주어도, 이 설정창에 키를 입력하지 않으면 내 데이터를 볼 수 없습니다. (보안 역할)</strong>
+        </p>
+        <div class="form-group">
+            <label>GitHub Personal Access Token (PAT)</label>
+            <input type="password" id="syncToken" placeholder="ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX">
+        </div>
+        <div class="form-group">
+            <label>GitHub Gist ID</label>
+            <input type="text" id="syncGistId" placeholder="예: 8a9b3c4d5e6f7g8h9i0j...">
+        </div>
+        <div class="form-actions" style="margin-top:24px;">
+            <button class="btn" onclick="App.closeModal('sync')">닫기</button>
+            <button class="btn btn-primary" onclick="App.saveSyncConfig()">✅ 저장 및 동기화</button>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--glass-border);margin:20px 0;">
+        <div class="form-group">
+            <button class="btn" onclick="App.disconnectSync()" style="width:100%;justify-content:center;color:var(--color-warn);">🔌 동기화 연결 해제 (로컬 모드)</button>
+        </div>
+    </div>
+</div>
+
 <!-- ============ TOAST CONTAINER ============ -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -919,73 +947,36 @@ const App = {
             },
             portfolios: {
                 owner: {
-                    name: '본인 (L-Project 대표)',
+                    name: '본인',
                     icon: '👤',
-                    holdings: [
-                        { id:'o1', ticker:'LEU', name:'Centrus Energy', market:'US', shares:16, avgCost:195.89, currentPrice:146.46, currency:'USD', yahoo:'LEU', note:'코어 확신 (DOE 계약)' },
-                        { id:'o2', ticker:'NVTS', name:'Navitas Semi', market:'US', shares:9, avgCost:9.61, currentPrice:11.73, currency:'USD', yahoo:'NVTS', note:'' },
-                        { id:'o3', ticker:'RKLB', name:'Rocket Lab', market:'US', shares:23, avgCost:74.46, currentPrice:66.60, currency:'USD', yahoo:'RKLB', note:'코어 확신 (Iridium M&A)' },
-                        { id:'o4', ticker:'GOOGL', name:'Alphabet', market:'US', shares:5, avgCost:384.75, currentPrice:371.39, currency:'USD', yahoo:'GOOGL', note:'' },
-                        { id:'o5', ticker:'MP', name:'MP Materials', market:'US', shares:50, avgCost:72.35, currentPrice:44.67, currency:'USD', yahoo:'MP', note:'' },
-                        { id:'o6', ticker:'CRML', name:'Critical Metals', market:'US', shares:200, avgCost:14.42, currentPrice:6.92, currency:'USD', yahoo:'CRML', note:'⚠️ 물타기 금지 (투기급)' },
-                        { id:'o7', ticker:'SMR', name:'NuScale Power', market:'US', shares:234, avgCost:24.67, currentPrice:7.56, currency:'USD', yahoo:'SMR', note:'⚠️ 물타기 금지 (투기급)' },
-                        { id:'o8', ticker:'2644', name:'GX US Bond', market:'JP', shares:35, avgCost:3619.43, currentPrice:4671, currency:'JPY', yahoo:'2644.T', note:'헤징 방패' },
-                        { id:'o9', ticker:'1321', name:'NEXT FUNDS 225', market:'JP', shares:2, avgCost:61217.50, currentPrice:69230, currency:'JPY', yahoo:'1321.T', note:'' },
-                        { id:'o10', ticker:'9434', name:'SoftBank Corp', market:'JP', shares:200, avgCost:218.00, currentPrice:220.0, currency:'JPY', yahoo:'9434.T', note:'' },
-                        { id:'o11', ticker:'541A', name:'', market:'JP', shares:140, avgCost:1059.50, currentPrice:1091.5, currency:'JPY', yahoo:'541A.T', note:'' },
-                        { id:'o12', ticker:'513A', name:'', market:'JP', shares:300, avgCost:924.66, currentPrice:849.0, currency:'JPY', yahoo:'513A.T', note:'' },
-                        { id:'o13', ticker:'1476', name:'iShares JGB', market:'JP', shares:100, avgCost:1975.51, currentPrice:1900.0, currency:'JPY', yahoo:'1476.T', note:'' }
-                    ],
-                    cash: { USD: 652.85, JPY: 46386 },
-                    realizedPnL: { USD: 3138.93, JPY: 143524 },
+                    holdings: [],
+                    cash: { KRW: 0 },
+                    realizedPnL: { KRW: 0 },
                     realizedHistory: [],
                     archivedPnL: [],
-                    rules: [
-                        'SpaceX (SPCX): $115~120 진입 대기',
-                        'LEU & RKLB: 코어 확신 포지션 — 절대 손절 금지',
-                        'SMR & CRML: 투기급 — 물타기 절대 금지',
-                        'JP 포트폴리오: 헤징 방패 역할 — 2644 이익실현 트리거 관찰'
-                    ],
+                    rules: [],
                     savings: []
                 },
                 wife: {
-                    name: '와이프 (사모님)',
+                    name: '와이프',
                     icon: '👩',
-                    holdings: [
-                        { id:'w1', ticker:'GOOGL', name:'Alphabet', market:'US', shares:2, avgCost:326.264, currentPrice:326.264, currency:'USD', yahoo:'GOOGL', note:'' },
-                        { id:'w2', ticker:'MSFT', name:'Microsoft', market:'US', shares:2, avgCost:399.405, currentPrice:399.405, currency:'USD', yahoo:'MSFT', note:'' },
-                        { id:'w3', ticker:'NVDA', name:'NVIDIA', market:'US', shares:4, avgCost:198.12, currentPrice:198.12, currency:'USD', yahoo:'NVDA', note:'' },
-                        { id:'w4', ticker:'TIGER_SP500', name:'TIGER 미국S&P500', market:'ISA', shares:117, avgCost:26647, currentPrice:26647, currency:'KRW', yahoo:'360750.KS', note:'ISA 계좌' },
-                        { id:'w5', ticker:'KODEX_SP500TR', name:'KODEX 미국S&P500TR', market:'ISA', shares:124, avgCost:24251, currentPrice:24251, currency:'KRW', yahoo:'379780.KS', note:'ISA 계좌' }
-                    ],
-                    cash: { USD: 5110.98, KRW_ISA: 1091228 },
-                    realizedPnL: { USD: 409.21, KRW_ISA: 270276 },
+                    holdings: [],
+                    cash: { KRW: 0 },
+                    realizedPnL: { KRW: 0 },
                     realizedHistory: [],
                     archivedPnL: [],
                     rules: [],
                     savings: []
                 },
                 son: {
-                    name: '임서율',
+                    name: '자녀',
                     icon: '👦',
-                    holdings: [
-                        { id:'s1', ticker:'TIGER_DIV', name:'TIGER 미국배당다우존스', market:'KR', shares:140, avgCost:14610, currentPrice:14610, currency:'KRW', yahoo:'458730.KS', note:'Core: 미국 배당' },
-                        { id:'s2', ticker:'CELLTRION', name:'셀트리온', market:'KR', shares:10, avgCost:207359, currentPrice:207359, currency:'KRW', yahoo:'068270.KS', note:'⛔ 추가매수 영구 금지 — 본전 매도 후 미국 환승 대기' },
-                        { id:'s3', ticker:'KODEX_AI_OPT', name:'KODEX 미국AI광통신', market:'KR', shares:90, avgCost:12455, currentPrice:12455, currency:'KRW', yahoo:'', note:'Satellite: 광통신 테마' },
-                        { id:'s4', ticker:'KODEX_SP500', name:'KODEX 미국S&P500', market:'KR', shares:49, avgCost:25181, currentPrice:25181, currency:'KRW', yahoo:'379800.KS', note:'Core: 미국 지수' },
-                        { id:'s5', ticker:'KODEX_NAS100', name:'KODEX 나스닥100', market:'KR', shares:35, avgCost:29145, currentPrice:29145, currency:'KRW', yahoo:'304940.KS', note:'Core: 미국 지수' },
-                        { id:'s6', ticker:'TIGER_SPACE', name:'TIGER 미국우주테크', market:'KR', shares:45, avgCost:9029, currentPrice:9029, currency:'KRW', yahoo:'', note:'Satellite: 우주 테마' }
-                    ],
-                    cash: { KRW: 35682 },
+                    holdings: [],
+                    cash: { KRW: 0 },
                     realizedPnL: { KRW: 0 },
                     realizedHistory: [],
                     archivedPnL: [],
-                    rules: [
-                        '100% 미국 중심주의: 추가 매수는 미국 지수/배당/테마 ETF에만 집행',
-                        '셀트리온: 추가매수 영구 금지 — 본전 도달 시 매도 → 미국 자산 환승',
-                        'Core(배당+지수) = 방어벽 / Satellite(광통신+우주) = 폭발력',
-                        '하락장 = 바겐세일 기회 — 절대 손절 금지, 평단가 하향 기회'
-                    ],
+                    rules: [],
                     savings: []
                 }
             }
@@ -997,9 +988,34 @@ const App = {
     // ============================================================
     // 3.2 STATE MANAGEMENT
     // ============================================================
-    loadData() {
+    async loadData() {
+        const token = localStorage.getItem('ADATA_SYNC_TOKEN');
+        const gistId = localStorage.getItem('ADATA_SYNC_GIST');
+        let raw = null;
+
+        if (token && gistId) {
+            try {
+                const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                    cache: 'no-store'
+                });
+                if (res.ok) {
+                    const gist = await res.json();
+                    if (gist.files['adata_sync.json']) {
+                        raw = gist.files['adata_sync.json'].content;
+                        localStorage.setItem(this.STORAGE_KEY, raw); // local backup
+                    }
+                }
+            } catch (e) {
+                console.error('Cloud load failed, falling back to local', e);
+            }
+        }
+
+        if (!raw) {
+            raw = localStorage.getItem(this.STORAGE_KEY);
+        }
+
         try {
-            const raw = localStorage.getItem(this.STORAGE_KEY);
             if (raw) {
                 this.state = JSON.parse(raw);
                 // Migration: ensure all fields
@@ -1028,11 +1044,28 @@ const App = {
             this.state = this.getDefaultData();
         }
         this.checkYearReset();
+        this.updateSyncBadge();
     },
 
     saveData() {
         this.state.meta.lastUpdated = new Date().toISOString();
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+        const jsonStr = JSON.stringify(this.state);
+        
+        // 1. Local Save
+        localStorage.setItem(this.STORAGE_KEY, jsonStr);
+
+        // 2. Cloud Sync (Fire and forget)
+        const token = localStorage.getItem('ADATA_SYNC_TOKEN');
+        const gistId = localStorage.getItem('ADATA_SYNC_GIST');
+        if (token && gistId) {
+            fetch(`https://api.github.com/gists/${gistId}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                body: JSON.stringify({
+                    files: { 'adata_sync.json': { content: jsonStr } }
+                })
+            }).catch(e => console.error('Cloud sync failed:', e));
+        }
     },
 
     genId() { return '_' + Math.random().toString(36).substr(2, 9); },
@@ -2164,12 +2197,87 @@ const App = {
     },
 
     // ============================================================
+    // 3.13 CLOUD SYNC
+    // ============================================================
+    async saveSyncConfig() {
+        const token = document.getElementById('syncToken').value.trim();
+        let gistId = document.getElementById('syncGistId').value.trim();
+        
+        if (!token) {
+            this.showToast('⚠️ 토큰을 입력해주세요.', 'error');
+            return;
+        }
+
+        try {
+            this.showToast('⏳ 클라우드 연동 확인 중...', 'info');
+            
+            // If no Gist ID, create a new one automatically
+            if (!gistId) {
+                const res = await fetch('https://api.github.com/gists', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+                    body: JSON.stringify({
+                        description: 'A-DATA Global Asset Sync',
+                        public: false,
+                        files: { 'adata_sync.json': { content: JSON.stringify(this.state) } }
+                    })
+                });
+                if (!res.ok) throw new Error('Gist 생성 실패 (토큰 권한 확인)');
+                const data = await res.json();
+                gistId = data.id;
+                document.getElementById('syncGistId').value = gistId;
+            }
+
+            // Save configuration
+            localStorage.setItem('ADATA_SYNC_TOKEN', token);
+            localStorage.setItem('ADATA_SYNC_GIST', gistId);
+            
+            this.closeModal('sync');
+            this.showToast('✅ 클라우드 동기화 성공!', 'success');
+            
+            // Reload data from cloud and render
+            await this.loadData();
+            this.render();
+        } catch (e) {
+            this.showToast('❌ 연동 실패: ' + e.message, 'error');
+        }
+    },
+    
+    disconnectSync() {
+        localStorage.removeItem('ADATA_SYNC_TOKEN');
+        localStorage.removeItem('ADATA_SYNC_GIST');
+        this.closeModal('sync');
+        this.updateSyncBadge();
+        this.showToast('🔌 로컬 모드로 전환되었습니다.', 'info');
+    },
+
+    updateSyncBadge() {
+        const badge = document.getElementById('syncStatusBadge');
+        if (!badge) return;
+        const token = localStorage.getItem('ADATA_SYNC_TOKEN');
+        if (token) {
+            badge.innerHTML = '<span class="status-dot" style="background:var(--color-profit);"></span>☁️ 동기화 됨';
+        } else {
+            badge.innerHTML = '<span class="status-dot"></span>⚠️ 로컬 모드';
+        }
+    },
+
+    // ============================================================
     // 3.14 MODAL MANAGEMENT
     // ============================================================
     openModal(type, defaultPid) {
-        const modalMap = { trade: 'modalTrade', addStock: 'modalAddStock', cash: 'modalCash', realized: 'modalRealized', importExport: 'modalImportExport', savings: 'modalSavings' };
+        const modalMap = { trade: 'modalTrade', addStock: 'modalAddStock', cash: 'modalCash', realized: 'modalRealized', importExport: 'modalImportExport', savings: 'modalSavings', sync: 'modalSync' };
         const el = document.getElementById(modalMap[type]);
         if (!el) return;
+        
+        // Populate sync inputs if opening sync modal
+        if (type === 'sync') {
+            const token = localStorage.getItem('ADATA_SYNC_TOKEN') || '';
+            const gistId = localStorage.getItem('ADATA_SYNC_GIST') || '';
+            document.getElementById('syncToken').value = token;
+            document.getElementById('syncGistId').value = gistId;
+        }
+
         el.classList.add('open');
 
         if (defaultPid) {
@@ -2183,7 +2291,7 @@ const App = {
     },
 
     closeModal(type) {
-        const modalMap = { trade: 'modalTrade', addStock: 'modalAddStock', cash: 'modalCash', realized: 'modalRealized', importExport: 'modalImportExport', savings: 'modalSavings' };
+        const modalMap = { trade: 'modalTrade', addStock: 'modalAddStock', cash: 'modalCash', realized: 'modalRealized', importExport: 'modalImportExport', savings: 'modalSavings', sync: 'modalSync' };
         const el = document.getElementById(modalMap[type]);
         if (el) el.classList.remove('open');
     },
@@ -2290,8 +2398,8 @@ const App = {
     // ============================================================
     // 3.17 INITIALIZATION
     // ============================================================
-    init() {
-        this.loadData();
+    async init() {
+        await this.loadData();
         this.render();
 
         // Tab event delegation
@@ -2345,9 +2453,9 @@ window.onerror = function(msg, url, line, col, error) {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     try {
-        App.init();
+        await App.init();
     } catch(e) {
         document.getElementById('tabContent').innerHTML = `<div style="padding: 20px; color: red;">
             <h3>Initialization Error:</h3>
