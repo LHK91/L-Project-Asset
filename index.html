@@ -599,9 +599,9 @@ body {
             <span class="api-status" id="apiStatus">⏳ 대기</span>
             <span id="refreshTimer" style="font-size:0.72rem;color:var(--text-tertiary);"></span>
             <select id="refreshInterval" class="btn btn-sm" onchange="App.setRefreshInterval(this.value)" style="padding:5px 8px;font-size:0.72rem;background:var(--bg-input);color:var(--text-secondary);border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;">
-                <option value="60">1분</option>
-                <option value="300" selected>5분</option>
+                <option value="300">5분</option>
                 <option value="600">10분</option>
+                <option value="900" selected>15분</option>
                 <option value="1800">30분</option>
                 <option value="0">수동</option>
             </select>
@@ -1167,7 +1167,7 @@ const App = {
     _countdownId: null,
     _nextRefreshAt: null,
     _isFetching: false,
-    _refreshSeconds: 300, // default 5min
+    _refreshSeconds: 900, // default 15min
 
     // --- CORS Proxy Helpers ---
     CORS_PROXIES: [
@@ -1198,7 +1198,24 @@ const App = {
 
     // --- Exchange Rates ---
     async fetchExchangeRates() {
-        // Try multiple exchange rate APIs
+        try {
+            const rates = await this.fetchBatchPrices(['KRW=X', 'JPYKRW=X']);
+            if (rates['KRW=X']?.price) {
+                this.state.exchangeRates.USD_KRW = Math.round(rates['KRW=X'].price * 100) / 100;
+            }
+            if (rates['JPYKRW=X']?.price) {
+                this.state.exchangeRates.JPY100_KRW = Math.round(rates['JPYKRW=X'].price * 100 * 100) / 100;
+            }
+            if (rates['KRW=X'] || rates['JPYKRW=X']) {
+                this.saveData();
+                this.updateRateInputs();
+                return true;
+            }
+        } catch(e) {
+            console.warn('Yahoo Rate API failed, falling back...');
+        }
+
+        // Fallback to free public APIs
         const apis = [
             'https://open.er-api.com/v6/latest/USD',
             'https://api.exchangerate-api.com/v4/latest/USD',
@@ -1229,8 +1246,13 @@ const App = {
         const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`;
         const data = await this._fetchWithProxies(url, 10000);
         if (data) {
-            const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-            if (price && price > 0) return price;
+            const meta = data?.chart?.result?.[0]?.meta;
+            if (meta && meta.regularMarketPrice > 0) {
+                return {
+                    price: meta.regularMarketPrice,
+                    prevClose: meta.chartPreviousClose || meta.previousClose
+                };
+            }
         }
         return null;
     },
@@ -1246,12 +1268,17 @@ const App = {
         if (data) {
             for (const ticker of yahooTickers) {
                 try {
-                    const meta = data[ticker];
-                    // spark format: {TICKER: {close: [...], ...}} or chart format
+                    let price = null;
+                    let prevClose = null;
                     if (meta?.close?.length) {
-                        results[ticker] = meta.close[meta.close.length - 1];
+                        price = meta.close[meta.close.length - 1];
+                        prevClose = meta.previousClose;
                     } else if (meta?.chart?.result?.[0]?.meta?.regularMarketPrice) {
-                        results[ticker] = meta.chart.result[0].meta.regularMarketPrice;
+                        price = meta.chart.result[0].meta.regularMarketPrice;
+                        prevClose = meta.chart.result[0].meta.chartPreviousClose || meta.chart.result[0].meta.previousClose;
+                    }
+                    if (price) {
+                        results[ticker] = { price, prevClose };
                     }
                 } catch(e) {}
             }
@@ -1301,10 +1328,14 @@ const App = {
         // Apply batch results
         const remainingTickers = [];
         for (const [yahoo, refs] of tickerMap) {
-            if (batchResults[yahoo] && batchResults[yahoo] > 0) {
+            const res = batchResults[yahoo];
+            if (res && res.price > 0) {
                 for (const ref of refs) {
                     const h = this.state.portfolios[ref.pid].holdings.find(x => x.id === ref.hid);
-                    if (h) h.currentPrice = batchResults[yahoo];
+                    if (h) {
+                        h.currentPrice = res.price;
+                        if (res.prevClose) h.prevClose = res.prevClose;
+                    }
                 }
                 updated++;
             } else {
@@ -1315,12 +1346,15 @@ const App = {
         // 4. Fallback: fetch remaining individually
         for (const yahoo of remainingTickers) {
             this.setApiStatus('fetching', `🔄 ${yahoo} 조회 중... (${updated}/${allTickers.length})`);
-            const price = await this.fetchStockPrice(yahoo);
-            if (price !== null) {
+            const res = await this.fetchStockPrice(yahoo);
+            if (res && res.price !== null) {
                 const refs = tickerMap.get(yahoo);
                 for (const ref of refs) {
                     const h = this.state.portfolios[ref.pid].holdings.find(x => x.id === ref.hid);
-                    if (h) h.currentPrice = price;
+                    if (h) {
+                        h.currentPrice = res.price;
+                        if (res.prevClose) h.prevClose = res.prevClose;
+                    }
                 }
                 updated++;
             } else {
@@ -1660,6 +1694,19 @@ const App = {
             const currSym = currency === 'USD' ? '$' : currency === 'JPY' ? '¥' : '₩';
             const step = currency === 'KRW' ? '1' : currency === 'JPY' ? '0.5' : '0.01';
 
+            let deltaHtml = '';
+            if (h.prevClose && h.currentPrice) {
+                const diff = h.currentPrice - h.prevClose;
+                if (diff !== 0) {
+                    const sign = diff > 0 ? '▲' : '▼';
+                    const color = diff > 0 ? 'var(--color-profit)' : 'var(--color-loss)';
+                    const diffPct = (Math.abs(diff) / h.prevClose) * 100;
+                    deltaHtml = `<div style="font-size:0.75rem; color:${color}; margin-top:2px;">
+                        ${sign} ${Math.abs(diff).toFixed(currency === 'KRW' ? 0 : 2)} (${diffPct.toFixed(2)}%)
+                    </div>`;
+                }
+            }
+
             rows += `<tr>
                 <td class="ticker">
                     ${this.fmt.marketBadge(market)}
@@ -1674,6 +1721,7 @@ const App = {
                     <input class="editable-price" type="number" step="${step}"
                         value="${h.currentPrice}" data-pid="${pid}" data-hid="${h.id}"
                         onchange="App.onPriceChange(this)">
+                    ${deltaHtml}
                 </td>
                 <td class="right">${this.fmt.price(info.value, currency)}<br><span style="font-size:0.72rem;color:var(--text-tertiary);">${this.fmt.krw(info.valueKRW)}</span></td>
                 <td class="right ${this.fmt.pctClass(info.rate)}">${this.fmt.pct(info.rate)}<br><span style="font-size:0.72rem;">${this.fmt.price(info.pnl, currency)}</span></td>
@@ -2427,7 +2475,7 @@ const App = {
         // Restore saved refresh interval
         const savedInterval = localStorage.getItem('ADATA_REFRESH_INTERVAL');
         if (savedInterval !== null) {
-            this._refreshSeconds = parseInt(savedInterval) || 300;
+            this._refreshSeconds = parseInt(savedInterval) || 900;
             const select = document.getElementById('refreshInterval');
             if (select) select.value = String(this._refreshSeconds);
         }
