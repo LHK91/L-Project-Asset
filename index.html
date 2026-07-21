@@ -1,0 +1,2362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A-DATA | L-Project 가족 통합 자산관리</title>
+    <meta name="description" content="L-Project 가족 통합 글로벌 자산관리 대시보드 - 실시간 환율/주가 연동">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+/* ================================================================
+   SECTION 1: DESIGN SYSTEM
+   ================================================================ */
+:root {
+    --bg-primary: #06070d;
+    --bg-secondary: #0d0f1a;
+    --bg-card: rgba(255,255,255,0.025);
+    --bg-card-hover: rgba(255,255,255,0.05);
+    --bg-input: rgba(255,255,255,0.06);
+    --glass-border: rgba(255,255,255,0.08);
+    --glass-border-hover: rgba(255,255,255,0.15);
+
+    --accent-blue: #00d2ff;
+    --accent-purple: #9d50bb;
+    --accent-cyan: #00f2fe;
+    --gradient-main: linear-gradient(135deg, #00d2ff 0%, #9d50bb 100%);
+    --gradient-subtle: linear-gradient(135deg, rgba(0,210,255,0.15), rgba(157,80,187,0.15));
+
+    --color-profit: #00e8a2;
+    --color-loss: #ff4757;
+    --color-warn: #ffa726;
+    --color-neutral: #78849e;
+
+    --text-primary: #f0f2f5;
+    --text-secondary: rgba(255,255,255,0.55);
+    --text-tertiary: rgba(255,255,255,0.35);
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+
+    --shadow-card: 0 4px 30px rgba(0,0,0,0.3);
+    --shadow-modal: 0 25px 80px rgba(0,0,0,0.6);
+
+    --transition-fast: 0.2s ease;
+    --transition-med: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-size: 14px; scroll-behavior: smooth; }
+
+body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Outfit', 'Noto Sans KR', -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+        radial-gradient(ellipse at 20% -10%, rgba(0,210,255,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 110%, rgba(157,80,187,0.05) 0%, transparent 50%);
+}
+
+/* ================================================================
+   SECTION 2: LAYOUT
+   ================================================================ */
+.app-container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+}
+
+/* Header */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 0 20px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.logo-area { display: flex; align-items: center; gap: 14px; }
+
+.logo-icon {
+    width: 44px; height: 44px;
+    background: var(--gradient-main);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 800;
+    box-shadow: 0 4px 20px rgba(0,210,255,0.25);
+}
+
+.logo-text h1 {
+    font-size: 1.55rem; font-weight: 700; letter-spacing: -0.5px;
+    background: var(--gradient-main);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.logo-text p { font-size: 0.78rem; color: var(--text-tertiary); margin-top: 2px; }
+
+.header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 0.82rem; font-weight: 500;
+    border: 1px solid var(--glass-border);
+    background: var(--bg-input); color: var(--text-primary);
+    cursor: pointer; transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+.btn:hover { border-color: var(--glass-border-hover); background: var(--bg-card-hover); }
+
+.btn-primary {
+    background: var(--gradient-main); border: none;
+    color: #fff; font-weight: 600;
+    box-shadow: 0 2px 15px rgba(0,210,255,0.2);
+}
+.btn-primary:hover { opacity: 0.9; box-shadow: 0 4px 25px rgba(0,210,255,0.35); }
+
+.btn-danger { border-color: rgba(255,71,87,0.3); color: var(--color-loss); }
+.btn-danger:hover { background: rgba(255,71,87,0.1); }
+
+.btn-sm { padding: 6px 12px; font-size: 0.75rem; }
+
+.status-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 16px; border-radius: 50px;
+    background: rgba(0,232,162,0.08); border: 1px solid rgba(0,232,162,0.25);
+    color: var(--color-profit); font-size: 0.78rem; font-weight: 600;
+}
+.status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--color-profit);
+    box-shadow: 0 0 8px var(--color-profit);
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.4); }
+}
+
+/* Exchange Rate Bar */
+.rate-bar {
+    display: flex; align-items: center; gap: 20px;
+    padding: 14px 22px; margin-bottom: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    backdrop-filter: blur(12px);
+    flex-wrap: wrap;
+}
+.rate-bar label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.82rem; color: var(--text-secondary);
+}
+.rate-bar label span.flag { font-size: 1.1rem; }
+.rate-bar input[type="number"] {
+    width: 110px; padding: 6px 10px; border-radius: 6px;
+    border: 1px solid var(--glass-border); background: var(--bg-input);
+    color: var(--text-primary); font-family: inherit; font-size: 0.85rem;
+    text-align: right; outline: none; transition: border-color var(--transition-fast);
+}
+.rate-bar input[type="number"]:focus { border-color: var(--accent-blue); }
+.rate-bar .rate-updated {
+    margin-left: auto; font-size: 0.72rem; color: var(--text-tertiary);
+}
+
+/* Tab Navigation */
+.tab-nav {
+    display: flex; gap: 4px; padding: 4px;
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 24px;
+    overflow-x: auto;
+}
+.tab-btn {
+    flex: 1; min-width: 100px; padding: 11px 20px;
+    border: none; border-radius: 10px;
+    background: transparent; color: var(--text-secondary);
+    font-family: inherit; font-size: 0.88rem; font-weight: 500;
+    cursor: pointer; transition: all var(--transition-med);
+    white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.tab-btn.active {
+    background: var(--gradient-subtle);
+    color: var(--accent-blue); font-weight: 600;
+    box-shadow: 0 2px 12px rgba(0,210,255,0.1);
+}
+
+.tab-panel { display: none; animation: fadeUp 0.35s ease; }
+.tab-panel.active { display: block; }
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Summary Cards Grid */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+}
+.summary-card {
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 22px 24px;
+    backdrop-filter: blur(12px);
+    transition: all var(--transition-med);
+    position: relative; overflow: hidden;
+}
+.summary-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--gradient-main); opacity: 0;
+    transition: opacity var(--transition-med);
+}
+.summary-card:hover { border-color: var(--glass-border-hover); transform: translateY(-3px); }
+.summary-card:hover::before { opacity: 1; }
+
+.summary-card .card-label {
+    font-size: 0.75rem; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+}
+.summary-card .card-value {
+    font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+.summary-card .card-sub {
+    font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px;
+}
+.card-value.profit { color: var(--color-profit); }
+.card-value.loss { color: var(--color-loss); }
+.card-value.neutral { color: var(--text-primary); }
+
+/* Section Headers */
+.section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px; padding: 0 4px;
+}
+.section-header h2 {
+    font-size: 1.1rem; font-weight: 600;
+    display: flex; align-items: center; gap: 10px;
+}
+.section-actions { display: flex; gap: 8px; }
+
+/* Tables */
+.table-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden; margin-bottom: 24px;
+    backdrop-filter: blur(12px);
+}
+.data-table {
+    width: 100%; border-collapse: collapse;
+}
+.data-table thead th {
+    padding: 14px 16px;
+    font-size: 0.72rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text-tertiary);
+    border-bottom: 1px solid var(--glass-border);
+    text-align: left; white-space: nowrap;
+    background: rgba(255,255,255,0.01);
+}
+.data-table thead th.right { text-align: right; }
+
+.data-table tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background var(--transition-fast);
+}
+.data-table tbody tr:hover { background: rgba(255,255,255,0.025); }
+.data-table tbody tr:last-child { border-bottom: none; }
+
+.data-table td {
+    padding: 14px 16px; font-size: 0.88rem; vertical-align: middle;
+}
+.data-table td.right { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table td.ticker {
+    font-weight: 600; color: var(--accent-blue);
+    display: flex; align-items: center; gap: 8px;
+}
+.data-table td .stock-name {
+    font-size: 0.72rem; color: var(--text-tertiary);
+    display: block; margin-top: 2px; font-weight: 400;
+}
+.data-table td.profit { color: var(--color-profit); font-weight: 600; }
+.data-table td.loss { color: var(--color-loss); font-weight: 600; }
+
+.data-table td .editable-price {
+    background: var(--bg-input); border: 1px solid transparent;
+    border-radius: 6px; padding: 4px 8px;
+    color: var(--text-primary); font-family: inherit; font-size: 0.88rem;
+    width: 100px; text-align: right; outline: none;
+    transition: border-color var(--transition-fast);
+    font-variant-numeric: tabular-nums;
+}
+.data-table td .editable-price:focus {
+    border-color: var(--accent-blue);
+    background: rgba(0,210,255,0.05);
+}
+
+.table-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; border-top: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.015);
+}
+.table-footer .total-label { font-size: 0.82rem; color: var(--text-secondary); }
+.table-footer .total-value { font-size: 1.05rem; font-weight: 700; }
+
+/* Market badge */
+.market-badge {
+    display: inline-flex; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.3px;
+}
+.market-badge.us { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.market-badge.jp { background: rgba(239,68,68,0.12); color: #f87171; }
+.market-badge.kr { background: rgba(168,85,247,0.15); color: #c084fc; }
+
+/* Cash & Realized Section */
+.info-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+}
+.info-card {
+    background: var(--bg-card); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg); padding: 22px 24px;
+    backdrop-filter: blur(12px);
+}
+.info-card h3 {
+    font-size: 0.88rem; font-weight: 600; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+}
+.info-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.info-row:last-child { border-bottom: none; }
+.info-row .info-label { font-size: 0.82rem; color: var(--text-secondary); }
+.info-row .info-value {
+    font-size: 0.92rem; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Notes Section */
+.notes-section {
+    background: var(--bg-card); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg); padding: 22px 24px; margin-bottom: 24px;
+    backdrop-filter: blur(12px);
+}
+.notes-section h3 {
+    font-size: 0.88rem; font-weight: 600; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+}
+.note-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-size: 0.85rem; color: var(--text-secondary);
+}
+.note-item:last-child { border-bottom: none; }
+.note-item .note-bullet {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-blue); flex-shrink: 0; margin-top: 6px;
+}
+.note-item .note-del {
+    margin-left: auto; cursor: pointer; color: var(--text-tertiary);
+    font-size: 0.78rem; padding: 2px 6px; border-radius: 4px;
+    transition: all var(--transition-fast); flex-shrink: 0;
+}
+.note-item .note-del:hover { background: rgba(255,71,87,0.1); color: var(--color-loss); }
+.note-input-row {
+    display: flex; gap: 8px; margin-top: 10px;
+}
+.note-input-row input {
+    flex: 1; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--glass-border); background: var(--bg-input);
+    color: var(--text-primary); font-family: inherit; font-size: 0.85rem; outline: none;
+}
+.note-input-row input:focus { border-color: var(--accent-blue); }
+
+/* Family Summary Tab */
+.family-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px; margin-bottom: 24px;
+}
+.family-member-card {
+    background: var(--bg-card); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg); padding: 24px;
+    backdrop-filter: blur(12px); transition: all var(--transition-med);
+}
+.family-member-card:hover { border-color: var(--glass-border-hover); transform: translateY(-3px); }
+.family-member-card .member-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+}
+.family-member-card .member-name {
+    font-size: 1rem; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+}
+.family-member-card .member-total {
+    font-size: 1.4rem; font-weight: 700; margin-bottom: 4px;
+}
+.family-member-card .member-pnl { font-size: 0.85rem; font-weight: 500; }
+
+.dist-bar {
+    display: flex; height: 8px; border-radius: 4px; overflow: hidden;
+    margin: 16px 0 10px; background: rgba(255,255,255,0.05);
+}
+.dist-bar .dist-seg { height: 100%; transition: width 0.6s ease; }
+.dist-legend {
+    display: flex; gap: 16px; flex-wrap: wrap;
+}
+.dist-legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; color: var(--text-secondary);
+}
+.dist-legend-item .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000; padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+.modal-overlay.open { display: flex; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+    background: var(--bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    padding: 32px; width: 100%; max-width: 520px;
+    box-shadow: var(--shadow-modal);
+    animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 85vh; overflow-y: auto;
+}
+@keyframes modalIn {
+    from { opacity: 0; transform: scale(0.92) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal h2 {
+    font-size: 1.2rem; font-weight: 700; margin-bottom: 22px;
+    display: flex; align-items: center; gap: 10px;
+}
+.modal-close {
+    position: absolute; top: 16px; right: 16px;
+    background: none; border: none; color: var(--text-tertiary);
+    font-size: 1.3rem; cursor: pointer; padding: 4px;
+}
+
+.form-group { margin-bottom: 16px; }
+.form-group label {
+    display: block; font-size: 0.78rem; font-weight: 500;
+    color: var(--text-secondary); margin-bottom: 6px;
+}
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border); background: var(--bg-input);
+    color: var(--text-primary); font-family: inherit; font-size: 0.88rem;
+    outline: none; transition: border-color var(--transition-fast);
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--accent-blue);
+}
+.form-group select { cursor: pointer; }
+.form-group textarea { resize: vertical; min-height: 60px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-actions { display: flex; gap: 10px; margin-top: 24px; justify-content: flex-end; }
+
+/* Toast */
+.toast-container {
+    position: fixed; bottom: 24px; right: 24px; z-index: 2000;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.toast {
+    padding: 14px 20px; border-radius: var(--radius-md);
+    background: var(--bg-secondary); border: 1px solid var(--glass-border);
+    color: var(--text-primary); font-size: 0.85rem;
+    box-shadow: var(--shadow-card); min-width: 260px;
+    animation: toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex; align-items: center; gap: 10px;
+}
+.toast.success { border-color: rgba(0,232,162,0.3); }
+.toast.error { border-color: rgba(255,71,87,0.3); }
+.toast.info { border-color: rgba(0,210,255,0.3); }
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Loading */
+.loading-spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid var(--glass-border);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.api-status {
+    font-size: 0.72rem; padding: 3px 10px; border-radius: 20px;
+    background: rgba(255,255,255,0.04); color: var(--text-tertiary);
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.api-status.fetching { color: var(--accent-blue); }
+.api-status.done { color: var(--color-profit); }
+.api-status.fail { color: var(--color-loss); }
+
+/* Empty State */
+.empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--text-tertiary); font-size: 0.9rem;
+}
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+/* Realized P&L History */
+.pnl-history { margin-top: 12px; }
+.pnl-history-item {
+    display: flex; justify-content: space-between;
+    padding: 6px 0; font-size: 0.8rem; color: var(--text-tertiary);
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    html { font-size: 13px; }
+    .app-header { padding: 16px 0 12px; }
+    .app-container { padding: 0 12px 40px; }
+    
+    .logo-text h1 { font-size: 1.35rem; }
+    .logo-text p { font-size: 0.75rem; }
+    
+    .header-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; gap: 8px; }
+    .header-actions .btn { flex: 1; text-align: center; justify-content: center; padding: 10px 0; }
+    .header-actions .status-badge { display: none; }
+    
+    .rate-bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
+    .rate-bar label { justify-content: space-between; }
+    .rate-bar input[type="number"] { width: 60%; max-width: 200px; text-align: right; }
+    .rate-bar .rate-updated { margin-left: 0; text-align: center; margin-top: 4px; }
+    
+    .tab-nav { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .tab-nav::-webkit-scrollbar { display: none; }
+    .tab-btn { flex: 0 0 auto; min-width: auto; padding: 10px 16px; font-size: 0.9rem; }
+    
+    .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .summary-card { padding: 16px 14px; }
+    .summary-card .card-value { font-size: 1.25rem; }
+    
+    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-md); }
+    .data-table { min-width: 650px; }
+    .data-table th, .data-table td { padding: 10px; font-size: 0.82rem; }
+    .data-table td .editable-price { width: 75px; font-size: 0.85rem; padding: 4px 6px; }
+    
+    .info-grid { grid-template-columns: 1fr; gap: 12px; }
+    .family-grid { grid-template-columns: 1fr; gap: 12px; }
+    .form-row { grid-template-columns: 1fr; }
+    
+    .modal { padding: 20px; max-width: 100%; max-height: 90vh; }
+    .modal h2 { font-size: 1.2rem; }
+}
+@media (max-width: 480px) {
+    html { font-size: 12px; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .header-actions .btn { font-size: 0.8rem; }
+    .data-table { min-width: 600px; }
+}
+    </style>
+</head>
+<body>
+<noscript>
+    <div style="padding: 20px; background: white; color: red; font-size: 1.2rem;">
+        자바스크립트가 비활성화되어 있거나 이 브라우저에서 지원하지 않습니다. 사파리(Safari)나 크롬(Chrome) 앱으로 열어주세요.
+    </div>
+</noscript>
+
+<div class="app-container">
+    <!-- ============ HEADER ============ -->
+    <header class="app-header">
+        <div class="logo-area">
+            <div class="logo-icon">A</div>
+            <div class="logo-text">
+                <h1>A-DATA 자산관리</h1>
+                <p>L-Project 가족 통합 글로벌 포트폴리오</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <span class="api-status" id="apiStatus">⏳ 대기</span>
+            <span id="refreshTimer" style="font-size:0.72rem;color:var(--text-tertiary);"></span>
+            <select id="refreshInterval" class="btn btn-sm" onchange="App.setRefreshInterval(this.value)" style="padding:5px 8px;font-size:0.72rem;background:var(--bg-input);color:var(--text-secondary);border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;">
+                <option value="60">1분</option>
+                <option value="300" selected>5분</option>
+                <option value="600">10분</option>
+                <option value="1800">30분</option>
+                <option value="0">수동</option>
+            </select>
+            <button class="btn" onclick="App.fetchAllPrices()" id="btnRefresh">🔄 시세 갱신</button>
+            <button class="btn" onclick="App.openModal('importExport')">💾 백업</button>
+            <span class="status-badge"><span class="status-dot"></span>시스템 정상</span>
+        </div>
+    </header>
+
+    <!-- ============ EXCHANGE RATE BAR ============ -->
+    <div class="rate-bar">
+        <label>
+            <span class="flag">🇺🇸</span> USD/KRW
+            <input type="number" id="rateUSD" step="0.01" onchange="App.onRateChange()">
+        </label>
+        <label>
+            <span class="flag">🇯🇵</span> JPY(100)/KRW
+            <input type="number" id="rateJPY" step="0.01" onchange="App.onRateChange()">
+        </label>
+        <span class="rate-updated" id="rateUpdated">환율 미입력</span>
+    </div>
+
+    <!-- ============ TAB NAVIGATION ============ -->
+    <nav class="tab-nav" id="tabNav">
+        <button class="tab-btn active" data-tab="family">📊 가족 통합</button>
+        <button class="tab-btn" data-tab="owner">👤 본인</button>
+        <button class="tab-btn" data-tab="wife">👩 와이프</button>
+        <button class="tab-btn" data-tab="son">👦 서율</button>
+    </nav>
+
+    <!-- ============ TAB PANELS ============ -->
+    <div id="tabContent">
+        <!-- Rendered by JavaScript -->
+    </div>
+</div>
+
+<!-- ============ TRADE MODAL ============ -->
+<div class="modal-overlay" id="modalTrade">
+    <div class="modal">
+        <h2>📝 매매 기록</h2>
+        <div class="form-group">
+            <label>포트폴리오</label>
+            <select id="tradePortfolio" onchange="App.onTradePortfolioChange()">
+                <option value="owner">본인</option>
+                <option value="wife">와이프</option>
+                <option value="son">서율</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>종목</label>
+            <select id="tradeTicker"></select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>매매 유형</label>
+                <select id="tradeType">
+                    <option value="buy">매수 (BUY)</option>
+                    <option value="sell">매도 (SELL)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>수량</label>
+                <input type="number" id="tradeQty" min="1" step="1" placeholder="0">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>체결가</label>
+            <input type="number" id="tradePrice" step="0.0001" placeholder="0.00">
+        </div>
+        <div class="form-actions">
+            <button class="btn" onclick="App.closeModal('trade')">취소</button>
+            <button class="btn btn-primary" onclick="App.executeTrade()">✅ 체결 기록</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ ADD STOCK MODAL ============ -->
+<div class="modal-overlay" id="modalAddStock">
+    <div class="modal">
+        <h2>➕ 종목 추가</h2>
+        <div class="form-group">
+            <label>포트폴리오</label>
+            <select id="addPortfolio">
+                <option value="owner">본인</option>
+                <option value="wife">와이프</option>
+                <option value="son">서율</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>시장 구분</label>
+            <select id="addMarket">
+                <option value="US">🇺🇸 미국 (USD)</option>
+                <option value="JP">🇯🇵 일본 (JPY)</option>
+                <option value="KR">🇰🇷 한국 (KRW)</option>
+                <option value="ISA">🇰🇷 ISA (KRW)</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>티커 / 종목코드</label>
+                <input type="text" id="addTicker" placeholder="예: AAPL, 068270">
+            </div>
+            <div class="form-group">
+                <label>종목명</label>
+                <input type="text" id="addName" placeholder="예: Apple Inc.">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Yahoo Finance 티커 (시세 자동 조회용, 선택)</label>
+            <input type="text" id="addYahoo" placeholder="예: AAPL, 2644.T, 068270.KS">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>보유 수량</label>
+                <input type="number" id="addQty" min="0" step="1" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>매수 평균가</label>
+                <input type="number" id="addAvgCost" step="0.0001" placeholder="0.00">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>현재가</label>
+            <input type="number" id="addCurrentPrice" step="0.0001" placeholder="0.00">
+        </div>
+        <div class="form-group">
+            <label>메모 (선택)</label>
+            <input type="text" id="addNote" placeholder="전략적 코멘트">
+        </div>
+        <div class="form-actions">
+            <button class="btn" onclick="App.closeModal('addStock')">취소</button>
+            <button class="btn btn-primary" onclick="App.addStock()">✅ 종목 추가</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ CASH ADJUST MODAL ============ -->
+<div class="modal-overlay" id="modalCash">
+    <div class="modal">
+        <h2>💰 예수금 조정</h2>
+        <div class="form-group">
+            <label>포트폴리오</label>
+            <select id="cashPortfolio" onchange="App.onCashPortfolioChange()">
+                <option value="owner">본인</option>
+                <option value="wife">와이프</option>
+                <option value="son">서율</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>통화 / 계좌</label>
+            <select id="cashCurrency"></select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>유형</label>
+                <select id="cashType">
+                    <option value="deposit">입금</option>
+                    <option value="withdraw">출금</option>
+                    <option value="set">직접 설정</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>금액</label>
+                <input type="number" id="cashAmount" step="0.01" placeholder="0.00">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="btn" onclick="App.closeModal('cash')">취소</button>
+            <button class="btn btn-primary" onclick="App.adjustCash()">✅ 적용</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ ADD SAVINGS/INSURANCE MODAL ============ -->
+<div class="modal-overlay" id="modalSavings">
+    <div class="modal">
+        <h2>🏦 예금 및 보험 추가</h2>
+        <div class="form-group">
+            <label>포트폴리오</label>
+            <select id="savingsPortfolio">
+                <option value="owner">본인</option>
+                <option value="wife">와이프</option>
+                <option value="son">서율</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>자산 유형</label>
+                <select id="savingsType">
+                    <option value="deposit">예금/적금</option>
+                    <option value="insurance">보험</option>
+                    <option value="pension">연금</option>
+                    <option value="other">기타 고정자산</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>통화</label>
+                <select id="savingsCurrency">
+                    <option value="KRW">KRW (원화)</option>
+                    <option value="USD">USD (달러)</option>
+                    <option value="JPY">JPY (엔화)</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>자산명</label>
+            <input type="text" id="savingsName" placeholder="예: 신한은행 주택청약, 교보생명 연금보험">
+        </div>
+        <div class="form-group">
+            <label>현재 금액</label>
+            <input type="number" id="savingsAmount" step="1" placeholder="0">
+        </div>
+        <div class="form-group">
+            <label>메모 (선택)</label>
+            <input type="text" id="savingsNote" placeholder="만기일, 이율 등 간략한 정보">
+        </div>
+        <div class="form-actions">
+            <button class="btn" onclick="App.closeModal('savings')">취소</button>
+            <button class="btn btn-primary" onclick="App.addSavings()">✅ 자산 추가</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ REALIZED P&L MODAL ============ -->
+<div class="modal-overlay" id="modalRealized">
+    <div class="modal">
+        <h2>📊 실현손익 기록</h2>
+        <div class="form-group">
+            <label>포트폴리오</label>
+            <select id="realizedPortfolio" onchange="App.onRealizedPortfolioChange()">
+                <option value="owner">본인</option>
+                <option value="wife">와이프</option>
+                <option value="son">서율</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>통화 / 계좌</label>
+            <select id="realizedCurrency"></select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>유형</label>
+                <select id="realizedType">
+                    <option value="profit">실현 수익 (+)</option>
+                    <option value="loss">실현 손실 (-)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>금액 (양수로 입력)</label>
+                <input type="number" id="realizedAmount" step="0.01" placeholder="0.00">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>메모 (선택)</label>
+            <input type="text" id="realizedMemo" placeholder="예: RKLB 10주 매도 수익">
+        </div>
+        <div class="form-actions">
+            <button class="btn" onclick="App.closeModal('realized')">취소</button>
+            <button class="btn btn-primary" onclick="App.recordRealized()">✅ 기록</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ IMPORT/EXPORT MODAL ============ -->
+<div class="modal-overlay" id="modalImportExport">
+    <div class="modal">
+        <h2>💾 데이터 백업 & 복원</h2>
+        <div class="form-group">
+            <label>현재 데이터 내보내기 (JSON)</label>
+            <button class="btn btn-primary" onclick="App.exportData()" style="width:100%;justify-content:center;">📤 JSON 파일로 내보내기</button>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--glass-border);margin:20px 0;">
+        <div class="form-group">
+            <label>데이터 불러오기 (JSON 파일 선택)</label>
+            <input type="file" id="importFile" accept=".json" style="margin-top:6px;">
+        </div>
+        <div class="form-actions">
+            <button class="btn" onclick="App.closeModal('importExport')">닫기</button>
+            <button class="btn btn-danger" onclick="App.importData()">📥 불러와서 덮어쓰기</button>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--glass-border);margin:20px 0;">
+        <div class="form-group">
+            <label style="color:var(--color-loss);">⚠️ 위험 영역</label>
+            <button class="btn btn-danger" onclick="App.resetAllData()" style="width:100%;justify-content:center;margin-top:8px;">🗑️ 전체 데이터 초기화</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ TOAST CONTAINER ============ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ================================================================
+     SECTION 3: JAVASCRIPT APPLICATION
+     ================================================================ -->
+<script>
+const App = {
+    // ============================================================
+    // 3.1 CONSTANTS & DEFAULT DATA
+    // ============================================================
+    STORAGE_KEY: 'L_PROJECT_ADATA_V2',
+    BASELINE_DATE: '2026-07-21',
+    activeTab: 'family',
+
+    getDefaultData() {
+        return {
+            meta: {
+                version: 2,
+                createdAt: this.BASELINE_DATE,
+                lastUpdated: new Date().toISOString(),
+                lastResetYear: 2026
+            },
+            exchangeRates: {
+                USD_KRW: 1492.20,
+                JPY100_KRW: 919.83
+            },
+            portfolios: {
+                owner: {
+                    name: '본인 (L-Project 대표)',
+                    icon: '👤',
+                    holdings: [
+                        { id:'o1', ticker:'LEU', name:'Centrus Energy', market:'US', shares:16, avgCost:195.89, currentPrice:146.46, currency:'USD', yahoo:'LEU', note:'코어 확신 (DOE 계약)' },
+                        { id:'o2', ticker:'NVTS', name:'Navitas Semi', market:'US', shares:9, avgCost:9.61, currentPrice:11.73, currency:'USD', yahoo:'NVTS', note:'' },
+                        { id:'o3', ticker:'RKLB', name:'Rocket Lab', market:'US', shares:23, avgCost:74.46, currentPrice:66.60, currency:'USD', yahoo:'RKLB', note:'코어 확신 (Iridium M&A)' },
+                        { id:'o4', ticker:'GOOGL', name:'Alphabet', market:'US', shares:5, avgCost:384.75, currentPrice:371.39, currency:'USD', yahoo:'GOOGL', note:'' },
+                        { id:'o5', ticker:'MP', name:'MP Materials', market:'US', shares:50, avgCost:72.35, currentPrice:44.67, currency:'USD', yahoo:'MP', note:'' },
+                        { id:'o6', ticker:'CRML', name:'Critical Metals', market:'US', shares:200, avgCost:14.42, currentPrice:6.92, currency:'USD', yahoo:'CRML', note:'⚠️ 물타기 금지 (투기급)' },
+                        { id:'o7', ticker:'SMR', name:'NuScale Power', market:'US', shares:234, avgCost:24.67, currentPrice:7.56, currency:'USD', yahoo:'SMR', note:'⚠️ 물타기 금지 (투기급)' },
+                        { id:'o8', ticker:'2644', name:'GX US Bond', market:'JP', shares:35, avgCost:3619.43, currentPrice:4671, currency:'JPY', yahoo:'2644.T', note:'헤징 방패' },
+                        { id:'o9', ticker:'1321', name:'NEXT FUNDS 225', market:'JP', shares:2, avgCost:61217.50, currentPrice:69230, currency:'JPY', yahoo:'1321.T', note:'' },
+                        { id:'o10', ticker:'9434', name:'SoftBank Corp', market:'JP', shares:200, avgCost:218.00, currentPrice:220.0, currency:'JPY', yahoo:'9434.T', note:'' },
+                        { id:'o11', ticker:'541A', name:'', market:'JP', shares:140, avgCost:1059.50, currentPrice:1091.5, currency:'JPY', yahoo:'541A.T', note:'' },
+                        { id:'o12', ticker:'513A', name:'', market:'JP', shares:300, avgCost:924.66, currentPrice:849.0, currency:'JPY', yahoo:'513A.T', note:'' },
+                        { id:'o13', ticker:'1476', name:'iShares JGB', market:'JP', shares:100, avgCost:1975.51, currentPrice:1900.0, currency:'JPY', yahoo:'1476.T', note:'' }
+                    ],
+                    cash: { USD: 652.85, JPY: 46386 },
+                    realizedPnL: { USD: 3138.93, JPY: 143524 },
+                    realizedHistory: [],
+                    archivedPnL: [],
+                    rules: [
+                        'SpaceX (SPCX): $115~120 진입 대기',
+                        'LEU & RKLB: 코어 확신 포지션 — 절대 손절 금지',
+                        'SMR & CRML: 투기급 — 물타기 절대 금지',
+                        'JP 포트폴리오: 헤징 방패 역할 — 2644 이익실현 트리거 관찰'
+                    ],
+                    savings: []
+                },
+                wife: {
+                    name: '와이프 (사모님)',
+                    icon: '👩',
+                    holdings: [
+                        { id:'w1', ticker:'GOOGL', name:'Alphabet', market:'US', shares:2, avgCost:326.264, currentPrice:326.264, currency:'USD', yahoo:'GOOGL', note:'' },
+                        { id:'w2', ticker:'MSFT', name:'Microsoft', market:'US', shares:2, avgCost:399.405, currentPrice:399.405, currency:'USD', yahoo:'MSFT', note:'' },
+                        { id:'w3', ticker:'NVDA', name:'NVIDIA', market:'US', shares:4, avgCost:198.12, currentPrice:198.12, currency:'USD', yahoo:'NVDA', note:'' },
+                        { id:'w4', ticker:'TIGER_SP500', name:'TIGER 미국S&P500', market:'ISA', shares:117, avgCost:26647, currentPrice:26647, currency:'KRW', yahoo:'360750.KS', note:'ISA 계좌' },
+                        { id:'w5', ticker:'KODEX_SP500TR', name:'KODEX 미국S&P500TR', market:'ISA', shares:124, avgCost:24251, currentPrice:24251, currency:'KRW', yahoo:'379780.KS', note:'ISA 계좌' }
+                    ],
+                    cash: { USD: 5110.98, KRW_ISA: 1091228 },
+                    realizedPnL: { USD: 409.21, KRW_ISA: 270276 },
+                    realizedHistory: [],
+                    archivedPnL: [],
+                    rules: [],
+                    savings: []
+                },
+                son: {
+                    name: '임서율',
+                    icon: '👦',
+                    holdings: [
+                        { id:'s1', ticker:'TIGER_DIV', name:'TIGER 미국배당다우존스', market:'KR', shares:140, avgCost:14610, currentPrice:14610, currency:'KRW', yahoo:'458730.KS', note:'Core: 미국 배당' },
+                        { id:'s2', ticker:'CELLTRION', name:'셀트리온', market:'KR', shares:10, avgCost:207359, currentPrice:207359, currency:'KRW', yahoo:'068270.KS', note:'⛔ 추가매수 영구 금지 — 본전 매도 후 미국 환승 대기' },
+                        { id:'s3', ticker:'KODEX_AI_OPT', name:'KODEX 미국AI광통신', market:'KR', shares:90, avgCost:12455, currentPrice:12455, currency:'KRW', yahoo:'', note:'Satellite: 광통신 테마' },
+                        { id:'s4', ticker:'KODEX_SP500', name:'KODEX 미국S&P500', market:'KR', shares:49, avgCost:25181, currentPrice:25181, currency:'KRW', yahoo:'379800.KS', note:'Core: 미국 지수' },
+                        { id:'s5', ticker:'KODEX_NAS100', name:'KODEX 나스닥100', market:'KR', shares:35, avgCost:29145, currentPrice:29145, currency:'KRW', yahoo:'304940.KS', note:'Core: 미국 지수' },
+                        { id:'s6', ticker:'TIGER_SPACE', name:'TIGER 미국우주테크', market:'KR', shares:45, avgCost:9029, currentPrice:9029, currency:'KRW', yahoo:'', note:'Satellite: 우주 테마' }
+                    ],
+                    cash: { KRW: 35682 },
+                    realizedPnL: { KRW: 0 },
+                    realizedHistory: [],
+                    archivedPnL: [],
+                    rules: [
+                        '100% 미국 중심주의: 추가 매수는 미국 지수/배당/테마 ETF에만 집행',
+                        '셀트리온: 추가매수 영구 금지 — 본전 도달 시 매도 → 미국 자산 환승',
+                        'Core(배당+지수) = 방어벽 / Satellite(광통신+우주) = 폭발력',
+                        '하락장 = 바겐세일 기회 — 절대 손절 금지, 평단가 하향 기회'
+                    ],
+                    savings: []
+                }
+            }
+        };
+    },
+
+    state: null,
+
+    // ============================================================
+    // 3.2 STATE MANAGEMENT
+    // ============================================================
+    loadData() {
+        try {
+            const raw = localStorage.getItem(this.STORAGE_KEY);
+            if (raw) {
+                this.state = JSON.parse(raw);
+                // Migration: ensure all fields
+                for (const pid of ['owner','wife','son']) {
+                    const p = this.state.portfolios[pid];
+                    if (!p) continue;
+                    if (!p.realizedHistory) p.realizedHistory = [];
+                    if (!p.archivedPnL) p.archivedPnL = [];
+                    if (!p.rules) p.rules = [];
+                    if (!p.savings) p.savings = [];
+                    for (const h of p.holdings) {
+                        if (!h.id) h.id = this.genId();
+                        if (!h.yahoo) h.yahoo = '';
+                        // Migration: fix 0-price holdings — default to avgCost
+                        if (!h.currentPrice || h.currentPrice === 0) {
+                            h.currentPrice = h.avgCost || 0;
+                        }
+                    }
+                }
+                if (!this.state.meta.lastResetYear) this.state.meta.lastResetYear = 2026;
+            } else {
+                this.state = this.getDefaultData();
+            }
+        } catch (e) {
+            console.error('Load error:', e);
+            this.state = this.getDefaultData();
+        }
+        this.checkYearReset();
+    },
+
+    saveData() {
+        this.state.meta.lastUpdated = new Date().toISOString();
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+    },
+
+    genId() { return '_' + Math.random().toString(36).substr(2, 9); },
+
+    // ============================================================
+    // 3.3 YEAR-END RESET
+    // ============================================================
+    checkYearReset() {
+        const currentYear = new Date().getFullYear();
+        const lastReset = this.state.meta.lastResetYear || currentYear;
+        if (currentYear > lastReset) {
+            for (const pid of ['owner', 'wife', 'son']) {
+                const p = this.state.portfolios[pid];
+                if (!p) continue;
+                // Archive current realized P&L
+                const archive = { year: lastReset, pnl: { ...p.realizedPnL }, history: [...p.realizedHistory] };
+                p.archivedPnL.push(archive);
+                // Reset realized P&L to 0
+                for (const key of Object.keys(p.realizedPnL)) {
+                    p.realizedPnL[key] = 0;
+                }
+                p.realizedHistory = [];
+            }
+            this.state.meta.lastResetYear = currentYear;
+            this.saveData();
+            this.showToast(`📅 ${currentYear}년 시작! ${lastReset}년 실현손익이 자산에 합산되고 초기화되었습니다.`, 'info');
+        }
+    },
+
+    // ============================================================
+    // 3.4 CALCULATION ENGINE
+    // ============================================================
+    calc: {
+        equityValue(shares, price) { return shares * price; },
+
+        returnRate(avgCost, currentPrice) {
+            if (!avgCost || avgCost === 0) return 0;
+            return ((currentPrice - avgCost) / avgCost) * 100;
+        },
+
+        newAvgCost(existShares, existAvg, newShares, newPrice) {
+            const totalShares = existShares + newShares;
+            if (totalShares === 0) return 0;
+            return ((existShares * existAvg) + (newShares * newPrice)) / totalShares;
+        },
+
+        toKRW(amount, currency, rates) {
+            if (currency === 'KRW' || currency === 'KRW_ISA') return amount;
+            if (currency === 'USD') return amount * rates.USD_KRW;
+            if (currency === 'JPY') return amount * (rates.JPY100_KRW / 100);
+            return amount;
+        },
+
+        portfolioSummary(portfolio, rates) {
+            let totalCost = 0, totalEquity = 0, totalCash = 0, totalSavings = 0;
+            // Holdings
+            for (const h of portfolio.holdings) {
+                const costKRW = this.toKRW(h.shares * h.avgCost, h.currency, rates);
+                const eqKRW = this.toKRW(h.shares * h.currentPrice, h.currency, rates);
+                totalCost += costKRW;
+                totalEquity += eqKRW;
+            }
+            // Cash
+            for (const [cur, amt] of Object.entries(portfolio.cash)) {
+                totalCash += this.toKRW(amt, cur, rates);
+            }
+            // Savings
+            if (portfolio.savings) {
+                for (const s of portfolio.savings) {
+                    totalSavings += this.toKRW(s.amount, s.currency, rates);
+                }
+            }
+            const unrealizedPnL = totalEquity - totalCost;
+            const totalAssets = totalEquity + totalCash + totalSavings;
+            // Realized PnL in KRW
+            let totalRealized = 0;
+            for (const [cur, amt] of Object.entries(portfolio.realizedPnL)) {
+                totalRealized += this.toKRW(amt, cur, rates);
+            }
+            return { totalCost, totalEquity, totalCash, totalSavings, unrealizedPnL, totalAssets, totalRealized };
+        },
+
+        holdingPnL(holding, rates) {
+            const cost = holding.shares * holding.avgCost;
+            const value = holding.shares * holding.currentPrice;
+            const pnl = value - cost;
+            const rate = this.returnRate(holding.avgCost, holding.currentPrice);
+            const pnlKRW = this.toKRW(pnl, holding.currency, rates);
+            const valueKRW = this.toKRW(value, holding.currency, rates);
+            const costKRW = this.toKRW(cost, holding.currency, rates);
+            return { cost, value, pnl, rate, pnlKRW, valueKRW, costKRW };
+        }
+    },
+
+    // ============================================================
+    // 3.5 API SERVICE (Multi-Source, Auto-Refresh)
+    // ============================================================
+    _refreshIntervalId: null,
+    _countdownId: null,
+    _nextRefreshAt: null,
+    _isFetching: false,
+    _refreshSeconds: 300, // default 5min
+
+    // --- CORS Proxy Helpers ---
+    CORS_PROXIES: [
+        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    ],
+
+    async _fetchWithProxies(url, timeoutMs = 10000) {
+        // Try direct first (may work in some browsers)
+        try {
+            const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+            if (res.ok) return await res.json();
+        } catch(e) { /* CORS blocked, try proxies */ }
+        // Try each proxy
+        for (const proxyFn of this.CORS_PROXIES) {
+            try {
+                const proxyUrl = proxyFn(url);
+                const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(timeoutMs) });
+                if (res.ok) {
+                    const text = await res.text();
+                    try { return JSON.parse(text); } catch(e) { continue; }
+                }
+            } catch(e) { /* try next proxy */ }
+        }
+        return null;
+    },
+
+    // --- Exchange Rates ---
+    async fetchExchangeRates() {
+        // Try multiple exchange rate APIs
+        const apis = [
+            'https://open.er-api.com/v6/latest/USD',
+            'https://api.exchangerate-api.com/v4/latest/USD',
+        ];
+        for (const apiUrl of apis) {
+            try {
+                const res = await fetch(apiUrl, { signal: AbortSignal.timeout(8000) });
+                const data = await res.json();
+                if (data.rates) {
+                    this.state.exchangeRates.USD_KRW = Math.round(data.rates.KRW * 100) / 100;
+                    const jpyPerUsd = data.rates.JPY;
+                    if (jpyPerUsd) {
+                        const krwPerJpy100 = Math.round((data.rates.KRW / jpyPerUsd) * 100 * 100) / 100;
+                        this.state.exchangeRates.JPY100_KRW = krwPerJpy100;
+                    }
+                    this.saveData();
+                    this.updateRateInputs();
+                    return true;
+                }
+            } catch (e) { console.warn('Rate API failed:', apiUrl, e); }
+        }
+        return false;
+    },
+
+    // --- Stock Prices (Individual) ---
+    async fetchStockPrice(yahooTicker) {
+        if (!yahooTicker) return null;
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`;
+        const data = await this._fetchWithProxies(url, 10000);
+        if (data) {
+            const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+            if (price && price > 0) return price;
+        }
+        return null;
+    },
+
+    // --- Stock Prices (Batch via Yahoo spark) ---
+    async fetchBatchPrices(yahooTickers) {
+        if (!yahooTickers.length) return {};
+        const results = {};
+        // Yahoo spark API can handle multiple symbols
+        const symbolStr = yahooTickers.join(',');
+        const url = `https://query1.finance.yahoo.com/v8/finance/spark?symbols=${encodeURIComponent(symbolStr)}&interval=1d&range=1d`;
+        const data = await this._fetchWithProxies(url, 15000);
+        if (data) {
+            for (const ticker of yahooTickers) {
+                try {
+                    const meta = data[ticker];
+                    // spark format: {TICKER: {close: [...], ...}} or chart format
+                    if (meta?.close?.length) {
+                        results[ticker] = meta.close[meta.close.length - 1];
+                    } else if (meta?.chart?.result?.[0]?.meta?.regularMarketPrice) {
+                        results[ticker] = meta.chart.result[0].meta.regularMarketPrice;
+                    }
+                } catch(e) {}
+            }
+        }
+        return results;
+    },
+
+    // --- Main Fetch Orchestrator ---
+    async fetchAllPrices() {
+        if (this._isFetching) return;
+        this._isFetching = true;
+        this.setApiStatus('fetching', '🔄 시세 갱신 중...');
+        const btnRefresh = document.getElementById('btnRefresh');
+        btnRefresh.disabled = true;
+        btnRefresh.innerHTML = '<span class="loading-spinner"></span> 갱신 중...';
+
+        let rateOk = false;
+        let updated = 0, failed = 0, noTicker = 0;
+
+        // 1. Fetch exchange rates
+        try { rateOk = await this.fetchExchangeRates(); } catch(e) {}
+
+        // 2. Collect all yahoo tickers (case-insensitive)
+        const tickerMap = new Map(); // yahoo -> [{pid, hid}]
+        for (const pid of ['owner','wife','son']) {
+            const p = this.state.portfolios[pid];
+            if (!p) continue;
+            for (const h of p.holdings) {
+                if (h.yahoo && h.yahoo.trim()) {
+                    const yTicker = h.yahoo.trim().toUpperCase();
+                    if (!tickerMap.has(yTicker)) tickerMap.set(yTicker, []);
+                    tickerMap.get(yTicker).push({ pid, hid: h.id });
+                } else {
+                    noTicker++;
+                }
+            }
+        }
+
+        const allTickers = [...tickerMap.keys()];
+
+        // 3. Try batch fetch first
+        let batchResults = {};
+        try {
+            batchResults = await this.fetchBatchPrices(allTickers);
+        } catch(e) { console.warn('Batch fetch failed, falling back to individual', e); }
+
+        // Apply batch results
+        const remainingTickers = [];
+        for (const [yahoo, refs] of tickerMap) {
+            if (batchResults[yahoo] && batchResults[yahoo] > 0) {
+                for (const ref of refs) {
+                    const h = this.state.portfolios[ref.pid].holdings.find(x => x.id === ref.hid);
+                    if (h) h.currentPrice = batchResults[yahoo];
+                }
+                updated++;
+            } else {
+                remainingTickers.push(yahoo);
+            }
+        }
+
+        // 4. Fallback: fetch remaining individually
+        for (const yahoo of remainingTickers) {
+            this.setApiStatus('fetching', `🔄 ${yahoo} 조회 중... (${updated}/${allTickers.length})`);
+            const price = await this.fetchStockPrice(yahoo);
+            if (price !== null) {
+                const refs = tickerMap.get(yahoo);
+                for (const ref of refs) {
+                    const h = this.state.portfolios[ref.pid].holdings.find(x => x.id === ref.hid);
+                    if (h) h.currentPrice = price;
+                }
+                updated++;
+            } else {
+                failed++;
+                console.warn(`Failed to fetch price for: ${yahoo}`);
+            }
+            // Delay between individual requests
+            await new Promise(r => setTimeout(r, 400));
+        }
+
+        // 5. Save & render
+        this.saveData();
+        this.render();
+
+        btnRefresh.disabled = false;
+        btnRefresh.innerHTML = '🔄 시세 갱신';
+        this._isFetching = false;
+
+        // 6. Status reporting
+        const totalTargets = allTickers.length;
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+        if (updated > 0 && failed === 0) {
+            this.setApiStatus('done', `✅ ${updated}/${totalTargets} 갱신 (${timeStr})`);
+            if (updated === totalTargets) {
+                this.showToast(`✅ 전체 시세 갱신 완료 (${updated}개 종목${rateOk ? ' + 환율' : ''})`, 'success');
+            }
+        } else if (updated > 0) {
+            this.setApiStatus('done', `⚠️ ${updated}성공 ${failed}실패 (${timeStr})`);
+            this.showToast(`⚠️ ${updated}개 성공, ${failed}개 실패${noTicker ? `, ${noTicker}개 티커 없음` : ''}`, 'info');
+        } else if (totalTargets === 0) {
+            this.setApiStatus('done', `ℹ️ 조회 대상 없음`);
+        } else {
+            this.setApiStatus('fail', `❌ 전체 실패 (${timeStr})`);
+            this.showToast('❌ 시세 조회 실패 — CORS 프록시 문제일 수 있습니다. 현재가를 직접 입력해주세요.', 'error');
+        }
+
+        // Reset countdown
+        this._resetCountdown();
+    },
+
+    // --- Auto Refresh ---
+    setRefreshInterval(seconds) {
+        this._refreshSeconds = parseInt(seconds) || 0;
+        localStorage.setItem('ADATA_REFRESH_INTERVAL', String(this._refreshSeconds));
+        this.startAutoRefresh();
+        if (this._refreshSeconds > 0) {
+            this.showToast(`🔄 자동 갱신: ${this._refreshSeconds >= 60 ? (this._refreshSeconds/60)+'분' : this._refreshSeconds+'초'} 간격`, 'info');
+        } else {
+            this.showToast('🔄 자동 갱신 중지 (수동 모드)', 'info');
+        }
+    },
+
+    startAutoRefresh() {
+        // Clear existing timers
+        if (this._refreshIntervalId) { clearInterval(this._refreshIntervalId); this._refreshIntervalId = null; }
+        if (this._countdownId) { clearInterval(this._countdownId); this._countdownId = null; }
+
+        if (this._refreshSeconds <= 0) {
+            document.getElementById('refreshTimer').textContent = '수동 모드';
+            return;
+        }
+
+        this._nextRefreshAt = Date.now() + this._refreshSeconds * 1000;
+
+        // Periodic fetch
+        this._refreshIntervalId = setInterval(() => {
+            this.fetchAllPrices();
+            this._nextRefreshAt = Date.now() + this._refreshSeconds * 1000;
+        }, this._refreshSeconds * 1000);
+
+        // Countdown display
+        this._startCountdownDisplay();
+    },
+
+    _startCountdownDisplay() {
+        if (this._countdownId) clearInterval(this._countdownId);
+        const timerEl = document.getElementById('refreshTimer');
+        this._countdownId = setInterval(() => {
+            if (!this._nextRefreshAt || this._refreshSeconds <= 0) {
+                timerEl.textContent = '';
+                return;
+            }
+            const remaining = Math.max(0, Math.round((this._nextRefreshAt - Date.now()) / 1000));
+            const min = Math.floor(remaining / 60);
+            const sec = remaining % 60;
+            timerEl.textContent = `⏱️ ${min}:${String(sec).padStart(2,'0')}`;
+        }, 1000);
+    },
+
+    _resetCountdown() {
+        if (this._refreshSeconds > 0) {
+            this._nextRefreshAt = Date.now() + this._refreshSeconds * 1000;
+        }
+    },
+
+    setApiStatus(type, text) {
+        const el = document.getElementById('apiStatus');
+        el.className = 'api-status ' + type;
+        el.textContent = text;
+    },
+
+    // ============================================================
+    // 3.6 FORMATTING UTILITIES
+    // ============================================================
+    fmt: {
+        krw(n) {
+            if (n === undefined || n === null || isNaN(n)) return '₩0';
+            const abs = Math.abs(Math.round(n));
+            const formatted = abs.toLocaleString('ko-KR');
+            return (n < 0 ? '-' : '') + '₩' + formatted;
+        },
+        usd(n) {
+            if (n === undefined || n === null || isNaN(n)) return '$0.00';
+            return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+        jpy(n) {
+            if (n === undefined || n === null || isNaN(n)) return '¥0';
+            return '¥' + Math.round(n).toLocaleString('ja-JP');
+        },
+        price(n, currency) {
+            if (currency === 'USD') return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+            if (currency === 'JPY') return '¥' + n.toLocaleString('ja-JP', { maximumFractionDigits: 2 });
+            return '₩' + Math.round(n).toLocaleString('ko-KR');
+        },
+        cashLabel(key) {
+            const labels = { USD: '💵 달러 예수금', JPY: '💴 엔화 예수금', KRW: '💰 원화 예수금', KRW_ISA: '💰 ISA 예수금' };
+            return labels[key] || key;
+        },
+        cashCurrency(key) {
+            if (key === 'USD') return 'USD';
+            if (key === 'JPY') return 'JPY';
+            return 'KRW';
+        },
+        pct(n) {
+            if (n === undefined || n === null || isNaN(n)) return '0.00%';
+            const sign = n >= 0 ? '+' : '';
+            return sign + n.toFixed(2) + '%';
+        },
+        pctClass(n) { return n >= 0 ? 'profit' : 'loss'; },
+        date(isoStr) {
+            if (!isoStr) return '-';
+            const d = new Date(isoStr);
+            return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+        },
+        marketBadge(market) {
+            const m = { US: ['🇺🇸 US','us'], JP: ['🇯🇵 JP','jp'], KR: ['🇰🇷 KR','kr'], ISA: ['🇰🇷 ISA','kr'] };
+            const [label, cls] = m[market] || ['?',''];
+            return `<span class="market-badge ${cls}">${label}</span>`;
+        }
+    },
+
+    // ============================================================
+    // 3.7 UI RENDERING
+    // ============================================================
+    render() {
+        this.updateRateInputs();
+        this.renderTabContent();
+    },
+
+    updateRateInputs() {
+        document.getElementById('rateUSD').value = this.state.exchangeRates.USD_KRW;
+        document.getElementById('rateJPY').value = this.state.exchangeRates.JPY100_KRW;
+        document.getElementById('rateUpdated').textContent =
+            '최종 업데이트: ' + this.fmt.date(this.state.meta.lastUpdated);
+    },
+
+    renderTabContent() {
+        const container = document.getElementById('tabContent');
+        if (this.activeTab === 'family') {
+            container.innerHTML = this.renderFamilyTab();
+        } else {
+            container.innerHTML = this.renderPortfolioTab(this.activeTab);
+        }
+    },
+
+    renderPortfolioTab(pid) {
+        const p = this.state.portfolios[pid];
+        if (!p) return '<div class="empty-state"><div class="empty-icon">🚫</div>포트폴리오를 찾을 수 없습니다.</div>';
+
+        const rates = this.state.exchangeRates;
+        const summary = this.calc.portfolioSummary(p, rates);
+
+        // Group holdings by market
+        const markets = {};
+        for (const h of p.holdings) {
+            const m = h.market || 'OTHER';
+            if (!markets[m]) markets[m] = [];
+            markets[m].push(h);
+        }
+
+        let html = '<div class="tab-panel active">';
+
+        // Summary Cards
+        html += `<div class="summary-grid">
+            <div class="summary-card">
+                <div class="card-label">💰 총 매수원금</div>
+                <div class="card-value neutral">${this.fmt.krw(summary.totalCost)}</div>
+                <div class="card-sub">투자 원금 원화 환산</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">📈 현재 평가금</div>
+                <div class="card-value neutral">${this.fmt.krw(summary.totalEquity)}</div>
+                <div class="card-sub">보유 주식 현재 가치</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">📊 미실현 손익</div>
+                <div class="card-value ${this.fmt.pctClass(summary.unrealizedPnL)}">${this.fmt.krw(summary.unrealizedPnL)}</div>
+                <div class="card-sub ${this.fmt.pctClass(summary.unrealizedPnL)}">${summary.totalCost > 0 ? this.fmt.pct((summary.unrealizedPnL / summary.totalCost) * 100) : '0.00%'}</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">🏦 총 자산</div>
+                <div class="card-value neutral">${this.fmt.krw(summary.totalAssets)}</div>
+                <div class="card-sub">평가금 + 예수금</div>
+            </div>
+        </div>`;
+
+        // Holdings Tables by Market
+        const marketOrder = ['US', 'JP', 'KR', 'ISA'];
+        const marketNames = { US: '🇺🇸 미국 포트폴리오', JP: '🇯🇵 일본 포트폴리오', KR: '🇰🇷 국내 포트폴리오', ISA: '🇰🇷 ISA 포트폴리오' };
+
+        for (const m of marketOrder) {
+            if (!markets[m] || markets[m].length === 0) continue;
+            html += this.renderHoldingsTable(pid, m, marketNames[m] || m, markets[m]);
+        }
+
+        // Savings Table
+        if (p.savings && p.savings.length > 0) {
+            html += this.renderSavingsTable(pid, p.savings, rates);
+        }
+
+        // Action Buttons
+        html += `<div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
+            <button class="btn" onclick="App.openModal('trade','${pid}')">📝 매매 기록</button>
+            <button class="btn" onclick="App.openModal('addStock')">➕ 종목 추가</button>
+            <button class="btn" onclick="App.openModal('savings')">🏦 예금/보험 추가</button>
+            <button class="btn" onclick="App.openModal('cash','${pid}')">💰 예수금 조정</button>
+            <button class="btn" onclick="App.openModal('realized','${pid}')">📊 실현손익 기록</button>
+        </div>`;
+
+        // Cash & Realized PnL
+        html += '<div class="info-grid">';
+        // Cash
+        html += '<div class="info-card"><h3>💵 예수금 현황</h3>';
+        let totalCashKRW = 0;
+        for (const [cur, amt] of Object.entries(p.cash)) {
+            const krw = this.calc.toKRW(amt, cur, rates);
+            totalCashKRW += krw;
+            html += `<div class="info-row">
+                <span class="info-label">${this.fmt.cashLabel(cur)}</span>
+                <span class="info-value">${this.fmt.price(amt, this.fmt.cashCurrency(cur))} <span style="color:var(--text-tertiary);font-size:0.75rem;">(${this.fmt.krw(krw)})</span></span>
+            </div>`;
+        }
+        html += `<div class="info-row" style="border-top:1px solid var(--glass-border);padding-top:10px;margin-top:4px;">
+            <span class="info-label" style="font-weight:600;">합계 (KRW)</span>
+            <span class="info-value">${this.fmt.krw(totalCashKRW)}</span>
+        </div></div>`;
+
+        // Realized PnL
+        html += '<div class="info-card"><h3>✅ 누적 실현손익 (${year}년)</h3>'.replace('${year}', new Date().getFullYear());
+        let totalRealizedKRW = 0;
+        for (const [cur, amt] of Object.entries(p.realizedPnL)) {
+            const krw = this.calc.toKRW(amt, cur, rates);
+            totalRealizedKRW += krw;
+            html += `<div class="info-row">
+                <span class="info-label">${this.fmt.cashLabel(cur).replace('예수금','실현손익')}</span>
+                <span class="info-value ${this.fmt.pctClass(amt)}">${this.fmt.price(amt, this.fmt.cashCurrency(cur))}</span>
+            </div>`;
+        }
+        html += `<div class="info-row" style="border-top:1px solid var(--glass-border);padding-top:10px;margin-top:4px;">
+            <span class="info-label" style="font-weight:600;">합계 (KRW)</span>
+            <span class="info-value ${this.fmt.pctClass(totalRealizedKRW)}">${this.fmt.krw(totalRealizedKRW)}</span>
+        </div>`;
+        // Recent history
+        if (p.realizedHistory.length > 0) {
+            html += '<div class="pnl-history"><div style="font-size:0.75rem;color:var(--text-tertiary);margin:10px 0 6px;">최근 기록</div>';
+            for (const item of p.realizedHistory.slice(-5).reverse()) {
+                html += `<div class="pnl-history-item">
+                    <span>${item.memo || '-'} (${item.currency})</span>
+                    <span class="${this.fmt.pctClass(item.amount)}">${item.amount >= 0 ? '+' : ''}${this.fmt.price(item.amount, this.fmt.cashCurrency(item.currency))}</span>
+                </div>`;
+            }
+            html += '</div>';
+        }
+        // Archived years
+        if (p.archivedPnL && p.archivedPnL.length > 0) {
+            html += '<div style="font-size:0.75rem;color:var(--text-tertiary);margin:12px 0 6px;">과거 연도</div>';
+            for (const arc of p.archivedPnL) {
+                let arcTotal = 0;
+                for (const [cur, amt] of Object.entries(arc.pnl)) {
+                    arcTotal += this.calc.toKRW(amt, cur, rates);
+                }
+                html += `<div class="pnl-history-item"><span>${arc.year}년</span><span class="${this.fmt.pctClass(arcTotal)}">${this.fmt.krw(arcTotal)}</span></div>`;
+            }
+        }
+        html += '</div>';
+        html += '</div>';
+
+        // Tactical Rules / Notes
+        if (p.rules && p.rules.length > 0) {
+            html += `<div class="notes-section"><h3>🎯 전술 규칙 & 메모</h3>`;
+            for (let i = 0; i < p.rules.length; i++) {
+                html += `<div class="note-item">
+                    <span class="note-bullet"></span>
+                    <span>${p.rules[i]}</span>
+                    <span class="note-del" onclick="App.deleteRule('${pid}',${i})">✕</span>
+                </div>`;
+            }
+            html += `<div class="note-input-row">
+                <input type="text" id="newRule_${pid}" placeholder="새 전술 규칙 / 메모 추가..." onkeypress="if(event.key==='Enter')App.addRule('${pid}')">
+                <button class="btn btn-sm" onclick="App.addRule('${pid}')">추가</button>
+            </div></div>`;
+        } else {
+            html += `<div class="notes-section"><h3>🎯 전술 규칙 & 메모</h3>
+            <div class="note-input-row">
+                <input type="text" id="newRule_${pid}" placeholder="새 전술 규칙 / 메모 추가..." onkeypress="if(event.key==='Enter')App.addRule('${pid}')">
+                <button class="btn btn-sm" onclick="App.addRule('${pid}')">추가</button>
+            </div></div>`;
+        }
+
+        html += '</div>';
+        return html;
+    },
+
+    renderHoldingsTable(pid, market, title, holdings) {
+        const rates = this.state.exchangeRates;
+        const currency = holdings[0]?.currency || 'KRW';
+        let totalValue = 0, totalCost = 0;
+
+        let rows = '';
+        for (const h of holdings) {
+            const info = this.calc.holdingPnL(h, rates);
+            totalValue += info.valueKRW;
+            totalCost += info.costKRW;
+
+            const currSym = currency === 'USD' ? '$' : currency === 'JPY' ? '¥' : '₩';
+            const step = currency === 'KRW' ? '1' : currency === 'JPY' ? '0.5' : '0.01';
+
+            rows += `<tr>
+                <td class="ticker">
+                    ${this.fmt.marketBadge(market)}
+                    <div>
+                        <span>${h.ticker}</span>
+                        <span class="stock-name" style="cursor:pointer;" onclick="App.editAssetName('${pid}','${h.id}','stock')">${h.name || '이름 없음'} ✏️</span>
+                    </div>
+                </td>
+                <td class="right">${h.shares}</td>
+                <td class="right">${this.fmt.price(h.avgCost, currency)}</td>
+                <td class="right">
+                    <input class="editable-price" type="number" step="${step}"
+                        value="${h.currentPrice}" data-pid="${pid}" data-hid="${h.id}"
+                        onchange="App.onPriceChange(this)">
+                </td>
+                <td class="right">${this.fmt.price(info.value, currency)}<br><span style="font-size:0.72rem;color:var(--text-tertiary);">${this.fmt.krw(info.valueKRW)}</span></td>
+                <td class="right ${this.fmt.pctClass(info.rate)}">${this.fmt.pct(info.rate)}<br><span style="font-size:0.72rem;">${this.fmt.price(info.pnl, currency)}</span></td>
+                <td style="font-size:0.78rem;color:var(--text-secondary);max-width:180px;">${h.note || '-'}
+                    <button class="btn btn-sm btn-danger" style="margin-left:8px;padding:2px 6px;font-size:0.68rem;" onclick="App.deleteHolding('${pid}','${h.id}')">삭제</button>
+                </td>
+            </tr>`;
+        }
+
+        const totalPnL = totalValue - totalCost;
+
+        return `<div class="section-header"><h2>${title}</h2></div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr>
+                    <th>종목</th><th class="right">수량</th><th class="right">매수 평단</th>
+                    <th class="right">현재가</th><th class="right">평가금액</th>
+                    <th class="right">수익률</th><th>비고</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+            <div class="table-footer">
+                <span class="total-label">${title} 합계 (KRW)</span>
+                <span>
+                    <span class="total-value">${this.fmt.krw(totalValue)}</span>
+                    <span style="margin-left:12px;" class="${this.fmt.pctClass(totalPnL)}">(${this.fmt.pct(totalCost > 0 ? (totalPnL/totalCost)*100 : 0)} / ${this.fmt.krw(totalPnL)})</span>
+                </span>
+            </div>
+        </div>`;
+    },
+
+    renderSavingsTable(pid, savings, rates) {
+        let totalValueKRW = 0;
+        let rows = '';
+
+        for (const s of savings) {
+            const valueKRW = this.calc.toKRW(s.amount, s.currency, rates);
+            totalValueKRW += valueKRW;
+            const badgeType = s.type === 'deposit' ? '💰 예금' : s.type === 'insurance' ? '🛡️ 보험' : s.type === 'pension' ? '👴 연금' : '📝 기타';
+            
+            rows += `<tr>
+                <td class="ticker">
+                    <span class="market-badge" style="background:rgba(255,255,255,0.1);color:#fff;">${badgeType}</span>
+                    <div>
+                        <span style="cursor:pointer;" onclick="App.editAssetName('${pid}','${s.id}','savings')">${s.name} ✏️</span>
+                    </div>
+                </td>
+                <td class="right">${this.fmt.price(s.amount, s.currency)}</td>
+                <td class="right">${this.fmt.krw(valueKRW)}</td>
+                <td style="font-size:0.78rem;color:var(--text-secondary);max-width:180px;">${s.note || '-'}
+                    <button class="btn btn-sm btn-danger" style="margin-left:8px;padding:2px 6px;font-size:0.68rem;" onclick="App.deleteSavings('${pid}','${s.id}')">삭제</button>
+                </td>
+            </tr>`;
+        }
+
+        return `<div class="section-header"><h2>🏦 예금 및 보험</h2></div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr>
+                    <th>자산명</th><th class="right">금액</th><th class="right">원화 환산</th><th>비고</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+            <div class="table-footer">
+                <span class="total-label">예금 및 보험 합계 (KRW)</span>
+                <span class="total-value">${this.fmt.krw(totalValueKRW)}</span>
+            </div>
+        </div>`;
+    },
+
+    renderFamilyTab() {
+        const rates = this.state.exchangeRates;
+        let grandTotal = 0, grandCost = 0, grandEquity = 0, grandCash = 0, grandRealized = 0;
+        const members = [];
+
+        for (const pid of ['owner', 'wife', 'son']) {
+            const p = this.state.portfolios[pid];
+            if (!p) continue;
+            const s = this.calc.portfolioSummary(p, rates);
+            grandTotal += s.totalAssets;
+            grandCost += s.totalCost;
+            grandEquity += s.totalEquity;
+            grandCash += s.totalCash;
+            grandRealized += s.totalRealized;
+            members.push({ pid, ...p, summary: s });
+        }
+
+        const grandPnL = grandEquity - grandCost;
+
+        let html = '<div class="tab-panel active">';
+
+        // Grand Summary
+        html += `<div class="summary-grid">
+            <div class="summary-card">
+                <div class="card-label">👨‍👩‍👦 가족 총 자산</div>
+                <div class="card-value neutral" style="font-size:1.8rem;">${this.fmt.krw(grandTotal)}</div>
+                <div class="card-sub">3인 포트폴리오 합산</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">💰 총 투자 원금</div>
+                <div class="card-value neutral">${this.fmt.krw(grandCost)}</div>
+                <div class="card-sub">전체 매수 원금</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">📊 총 미실현 손익</div>
+                <div class="card-value ${this.fmt.pctClass(grandPnL)}">${this.fmt.krw(grandPnL)}</div>
+                <div class="card-sub ${this.fmt.pctClass(grandPnL)}">${grandCost > 0 ? this.fmt.pct((grandPnL/grandCost)*100) : '0.00%'}</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">✅ 총 실현 손익</div>
+                <div class="card-value ${this.fmt.pctClass(grandRealized)}">${this.fmt.krw(grandRealized)}</div>
+                <div class="card-sub">${new Date().getFullYear()}년 누적</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">💵 현금/예금/보험</div>
+                <div class="card-value neutral">${this.fmt.krw(grandTotal - grandEquity)}</div>
+                <div class="card-sub">대기 자금 및 고정 자산</div>
+            </div>
+        </div>`;
+
+        // Per-member cards
+        html += '<div class="section-header"><h2>👨‍👩‍👦 구성원별 현황</h2></div>';
+        html += '<div class="family-grid">';
+        for (const m of members) {
+            const s = m.summary;
+            const pctOfTotal = grandTotal > 0 ? ((s.totalAssets / grandTotal) * 100).toFixed(1) : '0.0';
+            // Currency distribution
+            let usdAmt = 0, jpyAmt = 0, krwAmt = 0;
+            for (const h of m.holdings) {
+                const v = h.shares * h.currentPrice;
+                if (h.currency === 'USD') usdAmt += this.calc.toKRW(v, 'USD', rates);
+                else if (h.currency === 'JPY') jpyAmt += this.calc.toKRW(v, 'JPY', rates);
+                else krwAmt += this.calc.toKRW(v, 'KRW', rates);
+            }
+            for (const [cur, amt] of Object.entries(m.cash)) {
+                const v = this.calc.toKRW(amt, cur, rates);
+                if (cur === 'USD') usdAmt += v;
+                else if (cur === 'JPY') jpyAmt += v;
+                else krwAmt += v;
+            }
+            if (m.savings) {
+                for (const s of m.savings) {
+                    const v = this.calc.toKRW(s.amount, s.currency, rates);
+                    if (s.currency === 'USD') usdAmt += v;
+                    else if (s.currency === 'JPY') jpyAmt += v;
+                    else krwAmt += v;
+                }
+            }
+            const total = usdAmt + jpyAmt + krwAmt;
+            const usdPct = total > 0 ? (usdAmt / total * 100) : 0;
+            const jpyPct = total > 0 ? (jpyAmt / total * 100) : 0;
+            const krwPct = total > 0 ? (krwAmt / total * 100) : 0;
+
+            html += `<div class="family-member-card">
+                <div class="member-header">
+                    <span class="member-name">${m.icon} ${m.name}</span>
+                    <span style="font-size:0.82rem;color:var(--text-tertiary);">${pctOfTotal}%</span>
+                </div>
+                <div class="member-total">${this.fmt.krw(s.totalAssets)}</div>
+                <div class="member-pnl ${this.fmt.pctClass(s.unrealizedPnL)}">
+                    미실현 ${this.fmt.krw(s.unrealizedPnL)} (${s.totalCost > 0 ? this.fmt.pct((s.unrealizedPnL/s.totalCost)*100) : '0.00%'})
+                </div>
+                <div class="dist-bar">
+                    <div class="dist-seg" style="width:${usdPct}%;background:#60a5fa;"></div>
+                    <div class="dist-seg" style="width:${jpyPct}%;background:#f87171;"></div>
+                    <div class="dist-seg" style="width:${krwPct}%;background:#c084fc;"></div>
+                </div>
+                <div class="dist-legend">
+                    <div class="dist-legend-item"><span class="dot" style="background:#60a5fa;"></span>USD ${usdPct.toFixed(1)}%</div>
+                    <div class="dist-legend-item"><span class="dot" style="background:#f87171;"></span>JPY ${jpyPct.toFixed(1)}%</div>
+                    <div class="dist-legend-item"><span class="dot" style="background:#c084fc;"></span>KRW ${krwPct.toFixed(1)}%</div>
+                </div>
+                <div style="margin-top:14px;font-size:0.78rem;color:var(--text-tertiary);">
+                    예수금: ${this.fmt.krw(s.totalCash)} · 실현: ${this.fmt.krw(s.totalRealized)} · 종목: ${m.holdings.length}개
+                </div>
+            </div>`;
+        }
+        html += '</div>';
+
+        // Family Total Distribution
+        const usdTotal = members.reduce((sum, m) => {
+            let v = 0;
+            for (const h of m.holdings) { if (h.currency === 'USD') v += this.calc.toKRW(h.shares * h.currentPrice, 'USD', rates); }
+            for (const [cur, amt] of Object.entries(m.cash)) { if (cur === 'USD') v += this.calc.toKRW(amt, cur, rates); }
+            return sum + v;
+        }, 0);
+        const jpyTotal = members.reduce((sum, m) => {
+            let v = 0;
+            for (const h of m.holdings) { if (h.currency === 'JPY') v += this.calc.toKRW(h.shares * h.currentPrice, 'JPY', rates); }
+            for (const [cur, amt] of Object.entries(m.cash)) { if (cur === 'JPY') v += this.calc.toKRW(amt, cur, rates); }
+            return sum + v;
+        }, 0);
+        const krwTotal = grandTotal - usdTotal - jpyTotal;
+
+        html += `<div class="info-grid">
+            <div class="info-card">
+                <h3>🌐 통화별 자산 분포</h3>
+                <div class="info-row"><span class="info-label">🇺🇸 USD 자산</span><span class="info-value">${this.fmt.krw(usdTotal)} <span style="color:var(--text-tertiary);font-size:0.75rem;">(${grandTotal>0?(usdTotal/grandTotal*100).toFixed(1):'0'}%)</span></span></div>
+                <div class="info-row"><span class="info-label">🇯🇵 JPY 자산</span><span class="info-value">${this.fmt.krw(jpyTotal)} <span style="color:var(--text-tertiary);font-size:0.75rem;">(${grandTotal>0?(jpyTotal/grandTotal*100).toFixed(1):'0'}%)</span></span></div>
+                <div class="info-row"><span class="info-label">🇰🇷 KRW 자산</span><span class="info-value">${this.fmt.krw(krwTotal)} <span style="color:var(--text-tertiary);font-size:0.75rem;">(${grandTotal>0?(krwTotal/grandTotal*100).toFixed(1):'0'}%)</span></span></div>
+            </div>
+            <div class="info-card">
+                <h3>📋 자산 구성 요약</h3>
+                <div class="info-row"><span class="info-label">주식 평가금</span><span class="info-value">${this.fmt.krw(grandEquity)}</span></div>
+                <div class="info-row"><span class="info-label">현금 예수금</span><span class="info-value">${this.fmt.krw(grandCash)}</span></div>
+                <div class="info-row"><span class="info-label">주식 비중</span><span class="info-value">${grandTotal>0?(grandEquity/grandTotal*100).toFixed(1):'0'}%</span></div>
+                <div class="info-row"><span class="info-label">현금 비중</span><span class="info-value">${grandTotal>0?(grandCash/grandTotal*100).toFixed(1):'0'}%</span></div>
+            </div>
+        </div>`;
+
+        html += '</div>';
+        return html;
+    },
+
+    // ============================================================
+    // 3.8 EVENT HANDLERS
+    // ============================================================
+    onRateChange() {
+        const usd = parseFloat(document.getElementById('rateUSD').value) || 0;
+        const jpy = parseFloat(document.getElementById('rateJPY').value) || 0;
+        if (usd > 0) this.state.exchangeRates.USD_KRW = usd;
+        if (jpy > 0) this.state.exchangeRates.JPY100_KRW = jpy;
+        this.saveData();
+        this.renderTabContent();
+        this.showToast('✅ 환율 업데이트 적용', 'success');
+    },
+
+    onPriceChange(input) {
+        const pid = input.dataset.pid;
+        const hid = input.dataset.hid;
+        const price = parseFloat(input.value) || 0;
+        const targetH = this.state.portfolios[pid]?.holdings.find(x => x.id === hid);
+        if (targetH) {
+            targetH.currentPrice = price;
+            // Sync price to identical tickers in all portfolios
+            const searchTicker = targetH.yahoo ? targetH.yahoo.toUpperCase() : targetH.ticker.toUpperCase();
+            for (const pKey of ['owner', 'wife', 'son']) {
+                const p = this.state.portfolios[pKey];
+                if (!p) continue;
+                for (const h of p.holdings) {
+                    if (h.id === hid && pKey === pid) continue; // skip self
+                    const compareTicker = h.yahoo ? h.yahoo.toUpperCase() : h.ticker.toUpperCase();
+                    if (compareTicker === searchTicker) {
+                        h.currentPrice = price;
+                    }
+                }
+            }
+            this.saveData();
+            this.renderTabContent();
+            this.showToast('✅ 수동 시세 동기화 완료 (API 갱신 시 실시간 값으로 덮어씌워집니다)', 'success');
+        }
+    },
+
+    switchTab(tabId) {
+        this.activeTab = tabId;
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+        this.renderTabContent();
+    },
+
+    // ============================================================
+    // 3.9 TRADE EXECUTION
+    // ============================================================
+    executeTrade() {
+        const pid = document.getElementById('tradePortfolio').value;
+        const tickerSelect = document.getElementById('tradeTicker');
+        const hid = tickerSelect.value;
+        const type = document.getElementById('tradeType').value;
+        const qty = parseInt(document.getElementById('tradeQty').value) || 0;
+        const price = parseFloat(document.getElementById('tradePrice').value) || 0;
+
+        if (!hid || qty <= 0 || price <= 0) {
+            this.showToast('⚠️ 종목, 수량, 체결가를 정확히 입력해주세요.', 'error');
+            return;
+        }
+
+        const p = this.state.portfolios[pid];
+        const h = p.holdings.find(x => x.id === hid);
+        if (!h) return;
+
+        if (type === 'buy') {
+            // Recalc avg cost
+            h.avgCost = this.calc.newAvgCost(h.shares, h.avgCost, qty, price);
+            h.shares += qty;
+            // Decrease cash
+            const totalCost = qty * price;
+            const cashKey = h.currency === 'USD' ? 'USD' : h.currency === 'JPY' ? 'JPY' : Object.keys(p.cash).find(k => k.startsWith('KRW')) || 'KRW';
+            if (p.cash[cashKey] !== undefined) {
+                p.cash[cashKey] -= totalCost;
+            }
+            this.showToast(`✅ ${h.ticker} ${qty}주 매수 완료 (평단: ${this.fmt.price(h.avgCost, h.currency)})`, 'success');
+        } else {
+            // Sell
+            if (qty > h.shares) {
+                this.showToast('⚠️ 보유 수량보다 많이 매도할 수 없습니다.', 'error');
+                return;
+            }
+            // Calculate realized P&L
+            const realizedPnL = (price - h.avgCost) * qty;
+            const cashKey = h.currency === 'USD' ? 'USD' : h.currency === 'JPY' ? 'JPY' : Object.keys(p.cash).find(k => k.startsWith('KRW')) || 'KRW';
+            // Add realized PnL
+            const pnlKey = cashKey;
+            if (p.realizedPnL[pnlKey] !== undefined) {
+                p.realizedPnL[pnlKey] += realizedPnL;
+            } else {
+                p.realizedPnL[pnlKey] = realizedPnL;
+            }
+            p.realizedHistory.push({
+                date: new Date().toISOString(),
+                ticker: h.ticker,
+                type: 'sell',
+                qty, price, realizedPnL,
+                currency: h.currency,
+                amount: realizedPnL,
+                memo: `${h.ticker} ${qty}주 매도`
+            });
+            // Increase cash
+            if (p.cash[cashKey] !== undefined) {
+                p.cash[cashKey] += qty * price;
+            }
+            h.shares -= qty;
+            // Remove if zero shares
+            if (h.shares <= 0) {
+                p.holdings = p.holdings.filter(x => x.id !== hid);
+            }
+            this.showToast(`✅ ${h.ticker} ${qty}주 매도 완료 (실현손익: ${this.fmt.price(realizedPnL, h.currency)})`, 'success');
+        }
+
+        this.saveData();
+        this.closeModal('trade');
+        this.render();
+    },
+
+    // ============================================================
+    // 3.10 STOCK MANAGEMENT
+    // ============================================================
+    addStock() {
+        const pid = document.getElementById('addPortfolio').value;
+        const market = document.getElementById('addMarket').value;
+        const ticker = document.getElementById('addTicker').value.trim().toUpperCase();
+        const name = document.getElementById('addName').value.trim();
+        const yahoo = document.getElementById('addYahoo').value.trim();
+        const qty = parseInt(document.getElementById('addQty').value) || 0;
+        const avgCost = parseFloat(document.getElementById('addAvgCost').value) || 0;
+        const currentPrice = parseFloat(document.getElementById('addCurrentPrice').value) || 0;
+        const note = document.getElementById('addNote').value.trim();
+
+        if (!ticker) {
+            this.showToast('⚠️ 티커를 입력해주세요.', 'error');
+            return;
+        }
+
+        const currency = market === 'US' ? 'USD' : market === 'JP' ? 'JPY' : 'KRW';
+        const p = this.state.portfolios[pid];
+        p.holdings.push({
+            id: this.genId(),
+            ticker, name, market, shares: qty, avgCost, currentPrice,
+            currency, yahoo, note
+        });
+
+        // Deduct cash if has shares
+        if (qty > 0 && avgCost > 0) {
+            const totalCost = qty * avgCost;
+            const cashKey = currency === 'USD' ? 'USD' : currency === 'JPY' ? 'JPY' :
+                Object.keys(p.cash).find(k => k.startsWith('KRW')) || 'KRW';
+            if (p.cash[cashKey] === undefined) p.cash[cashKey] = 0;
+        }
+
+        this.saveData();
+        this.closeModal('addStock');
+        this.render();
+        this.showToast(`✅ ${ticker} 종목 추가 완료`, 'success');
+    },
+
+    deleteHolding(pid, hid) {
+        if (!confirm('이 종목을 삭제하시겠습니까?')) return;
+        const p = this.state.portfolios[pid];
+        p.holdings = p.holdings.filter(x => x.id !== hid);
+        this.saveData();
+        this.render();
+        this.showToast('🗑️ 종목 삭제 완료', 'info');
+    },
+
+    // ============================================================
+    // 3.11 SAVINGS & INSURANCE MANAGEMENT
+    // ============================================================
+    addSavings() {
+        const pid = document.getElementById('savingsPortfolio').value;
+        const type = document.getElementById('savingsType').value;
+        const currency = document.getElementById('savingsCurrency').value;
+        const name = document.getElementById('savingsName').value.trim();
+        const amount = parseFloat(document.getElementById('savingsAmount').value) || 0;
+        const note = document.getElementById('savingsNote').value.trim();
+
+        if (!name || amount <= 0) {
+            this.showToast('⚠️ 자산명과 금액을 정확히 입력해주세요.', 'error');
+            return;
+        }
+
+        const p = this.state.portfolios[pid];
+        if (!p.savings) p.savings = [];
+        
+        p.savings.push({
+            id: this.genId(),
+            type, currency, name, amount, note
+        });
+
+        this.saveData();
+        this.closeModal('savings');
+        this.render();
+        this.showToast(`✅ ${name} 자산 추가 완료`, 'success');
+    },
+
+    deleteSavings(pid, sid) {
+        if (!confirm('이 자산을 삭제하시겠습니까?')) return;
+        const p = this.state.portfolios[pid];
+        p.savings = p.savings.filter(x => x.id !== sid);
+        this.saveData();
+        this.render();
+        this.showToast('🗑️ 자산 삭제 완료', 'info');
+    },
+
+    editAssetName(pid, id, type) {
+        const p = this.state.portfolios[pid];
+        let item;
+        if (type === 'stock') {
+            item = p.holdings.find(x => x.id === id);
+        } else if (type === 'savings') {
+            item = p.savings.find(x => x.id === id);
+        }
+        
+        if (!item) return;
+        const newName = prompt('새로운 자산명을 입력하세요:', item.name || '');
+        if (newName !== null && newName.trim() !== '') {
+            item.name = newName.trim();
+            this.saveData();
+            this.renderTabContent();
+            this.showToast('✅ 이름이 변경되었습니다.', 'success');
+        }
+    },
+
+    // ============================================================
+    // 3.11 CASH MANAGEMENT
+    // ============================================================
+    adjustCash() {
+        const pid = document.getElementById('cashPortfolio').value;
+        const cur = document.getElementById('cashCurrency').value;
+        const type = document.getElementById('cashType').value;
+        const amount = parseFloat(document.getElementById('cashAmount').value) || 0;
+
+        if (amount <= 0 && type !== 'set') {
+            this.showToast('⚠️ 금액을 입력해주세요.', 'error');
+            return;
+        }
+
+        const p = this.state.portfolios[pid];
+        if (p.cash[cur] === undefined) p.cash[cur] = 0;
+
+        if (type === 'deposit') p.cash[cur] += amount;
+        else if (type === 'withdraw') p.cash[cur] -= amount;
+        else if (type === 'set') p.cash[cur] = amount;
+
+        this.saveData();
+        this.closeModal('cash');
+        this.render();
+        this.showToast(`✅ 예수금 업데이트 완료`, 'success');
+    },
+
+    // ============================================================
+    // 3.12 REALIZED P&L MANAGEMENT
+    // ============================================================
+    recordRealized() {
+        const pid = document.getElementById('realizedPortfolio').value;
+        const cur = document.getElementById('realizedCurrency').value;
+        const type = document.getElementById('realizedType').value;
+        const amount = parseFloat(document.getElementById('realizedAmount').value) || 0;
+        const memo = document.getElementById('realizedMemo').value.trim();
+
+        if (amount <= 0) {
+            this.showToast('⚠️ 금액을 입력해주세요.', 'error');
+            return;
+        }
+
+        const p = this.state.portfolios[pid];
+        const signed = type === 'loss' ? -amount : amount;
+
+        if (p.realizedPnL[cur] === undefined) p.realizedPnL[cur] = 0;
+        p.realizedPnL[cur] += signed;
+        p.realizedHistory.push({
+            date: new Date().toISOString(),
+            currency: cur,
+            amount: signed,
+            memo: memo || (type === 'profit' ? '실현 수익' : '실현 손실')
+        });
+
+        this.saveData();
+        this.closeModal('realized');
+        this.render();
+        this.showToast(`✅ 실현손익 기록 완료: ${signed >= 0 ? '+' : ''}${amount}`, 'success');
+    },
+
+    // ============================================================
+    // 3.13 RULES MANAGEMENT
+    // ============================================================
+    addRule(pid) {
+        const input = document.getElementById('newRule_' + pid);
+        if (!input || !input.value.trim()) return;
+        const p = this.state.portfolios[pid];
+        if (!p.rules) p.rules = [];
+        p.rules.push(input.value.trim());
+        this.saveData();
+        this.renderTabContent();
+    },
+
+    deleteRule(pid, idx) {
+        const p = this.state.portfolios[pid];
+        p.rules.splice(idx, 1);
+        this.saveData();
+        this.renderTabContent();
+    },
+
+    // ============================================================
+    // 3.14 MODAL MANAGEMENT
+    // ============================================================
+    openModal(type, defaultPid) {
+        const modalMap = { trade: 'modalTrade', addStock: 'modalAddStock', cash: 'modalCash', realized: 'modalRealized', importExport: 'modalImportExport', savings: 'modalSavings' };
+        const el = document.getElementById(modalMap[type]);
+        if (!el) return;
+        el.classList.add('open');
+
+        if (defaultPid) {
+            const select = el.querySelector('select[id$="Portfolio"]');
+            if (select) select.value = defaultPid;
+        }
+
+        if (type === 'trade') this.onTradePortfolioChange();
+        if (type === 'cash') this.onCashPortfolioChange();
+        if (type === 'realized') this.onRealizedPortfolioChange();
+    },
+
+    closeModal(type) {
+        const modalMap = { trade: 'modalTrade', addStock: 'modalAddStock', cash: 'modalCash', realized: 'modalRealized', importExport: 'modalImportExport', savings: 'modalSavings' };
+        const el = document.getElementById(modalMap[type]);
+        if (el) el.classList.remove('open');
+    },
+
+    onTradePortfolioChange() {
+        const pid = document.getElementById('tradePortfolio').value;
+        const p = this.state.portfolios[pid];
+        const select = document.getElementById('tradeTicker');
+        select.innerHTML = '';
+        for (const h of p.holdings) {
+            select.innerHTML += `<option value="${h.id}">${h.ticker} (${h.name || h.market}) - ${h.shares}주</option>`;
+        }
+    },
+
+    onCashPortfolioChange() {
+        const pid = document.getElementById('cashPortfolio').value;
+        const p = this.state.portfolios[pid];
+        const select = document.getElementById('cashCurrency');
+        select.innerHTML = '';
+        for (const key of Object.keys(p.cash)) {
+            select.innerHTML += `<option value="${key}">${this.fmt.cashLabel(key)} (${this.fmt.price(p.cash[key], this.fmt.cashCurrency(key))})</option>`;
+        }
+    },
+
+    onRealizedPortfolioChange() {
+        const pid = document.getElementById('realizedPortfolio').value;
+        const p = this.state.portfolios[pid];
+        const select = document.getElementById('realizedCurrency');
+        select.innerHTML = '';
+        for (const key of Object.keys(p.realizedPnL)) {
+            select.innerHTML += `<option value="${key}">${this.fmt.cashLabel(key).replace('예수금','실현손익')}</option>`;
+        }
+    },
+
+    // ============================================================
+    // 3.15 IMPORT / EXPORT
+    // ============================================================
+    exportData() {
+        const json = JSON.stringify(this.state, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ADATA_backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showToast('📤 데이터 내보내기 완료', 'success');
+    },
+
+    importData() {
+        const file = document.getElementById('importFile').files[0];
+        if (!file) {
+            this.showToast('⚠️ 파일을 선택해주세요.', 'error');
+            return;
+        }
+        if (!confirm('⚠️ 현재 데이터를 덮어쓰게 됩니다. 계속하시겠습니까?')) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (!data.portfolios || !data.meta) throw new Error('Invalid format');
+                this.state = data;
+                this.saveData();
+                this.render();
+                this.closeModal('importExport');
+                this.showToast('📥 데이터 불러오기 완료!', 'success');
+            } catch (err) {
+                this.showToast('❌ 잘못된 파일 형식입니다.', 'error');
+            }
+        };
+        reader.readAsText(file);
+    },
+
+    resetAllData() {
+        if (!confirm('⚠️ 모든 데이터가 삭제됩니다. 정말 초기화하시겠습니까?')) return;
+        if (!confirm('⚠️ 마지막 확인: 되돌릴 수 없습니다!')) return;
+        localStorage.removeItem(this.STORAGE_KEY);
+        this.state = this.getDefaultData();
+        this.saveData();
+        this.render();
+        this.closeModal('importExport');
+        this.showToast('🗑️ 전체 데이터가 초기화되었습니다.', 'info');
+    },
+
+    // ============================================================
+    // 3.16 TOAST NOTIFICATIONS
+    // ============================================================
+    showToast(msg, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+        toast.innerHTML = `<span>${icons[type] || ''}</span><span>${msg}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(40px)';
+            toast.style.transition = 'all 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    },
+
+    // ============================================================
+    // 3.17 INITIALIZATION
+    // ============================================================
+    init() {
+        this.loadData();
+        this.render();
+
+        // Tab event delegation
+        document.getElementById('tabNav').addEventListener('click', (e) => {
+            const btn = e.target.closest('.tab-btn');
+            if (btn) this.switchTab(btn.dataset.tab);
+        });
+
+        // Close modals on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('open');
+                }
+            });
+        });
+
+        // ESC to close modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+            }
+        });
+
+        // Restore saved refresh interval
+        const savedInterval = localStorage.getItem('ADATA_REFRESH_INTERVAL');
+        if (savedInterval !== null) {
+            this._refreshSeconds = parseInt(savedInterval) || 300;
+            const select = document.getElementById('refreshInterval');
+            if (select) select.value = String(this._refreshSeconds);
+        }
+
+        // Auto-fetch prices on load, then start auto-refresh
+        setTimeout(async () => {
+            await this.fetchAllPrices();
+            this.startAutoRefresh();
+        }, 800);
+    }
+};
+
+// Boot
+window.onerror = function(msg, url, line, col, error) {
+    const tabContent = document.getElementById('tabContent');
+    if (tabContent && tabContent.innerHTML.trim() === '') {
+        tabContent.innerHTML = `<div style="padding: 20px; color: red;">
+            <h3>Error occurred:</h3>
+            <p>${msg}</p>
+            <p>Line: ${line}, Col: ${col}</p>
+            <pre style="overflow:auto; margin-top:10px;">${error ? error.stack : ''}</pre>
+        </div>`;
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        App.init();
+    } catch(e) {
+        document.getElementById('tabContent').innerHTML = `<div style="padding: 20px; color: red;">
+            <h3>Initialization Error:</h3>
+            <p>${e.message}</p>
+            <pre style="overflow:auto; margin-top:10px;">${e.stack}</pre>
+        </div>`;
+    }
+});
+</script>
+
+</body>
+</html>
