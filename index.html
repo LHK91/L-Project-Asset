@@ -1196,6 +1196,25 @@ const App = {
         return null;
     },
 
+    // --- Local Python Booster ---
+    async fetchViaLocalServer(yahooTickers) {
+        if (!yahooTickers || !yahooTickers.length) return null;
+        try {
+            const symbolStr = yahooTickers.join(',');
+            const url = `http://127.0.0.1:5000/api/batch?tickers=${encodeURIComponent(symbolStr)}`;
+            const res = await fetch(url, { signal: AbortSignal.timeout(4000) }); // Fast timeout for local
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'success') {
+                    return data.data; // { "AAPL": {price, prevClose}, ... }
+                }
+            }
+        } catch(e) {
+            return null; // Local server not running
+        }
+        return null;
+    },
+
     // --- Exchange Rates ---
     async fetchExchangeRates() {
         try {
@@ -1260,6 +1279,15 @@ const App = {
     // --- Stock Prices (Batch via Yahoo spark) ---
     async fetchBatchPrices(yahooTickers) {
         if (!yahooTickers.length) return {};
+        
+        // 1. [BOOSTER] Try local python server first
+        const localData = await this.fetchViaLocalServer(yahooTickers);
+        if (localData) {
+            console.log('⚡ Booster Active! Data fetched via local python server.');
+            return localData;
+        }
+
+        // 2. [FALLBACK] Proxy spark API
         const results = {};
         // Yahoo spark API can handle multiple symbols
         const symbolStr = yahooTickers.join(',');
@@ -1270,12 +1298,13 @@ const App = {
                 try {
                     let price = null;
                     let prevClose = null;
+                    const meta = data[ticker]?.chart?.result?.[0]?.meta;
                     if (meta?.close?.length) {
                         price = meta.close[meta.close.length - 1];
                         prevClose = meta.previousClose;
-                    } else if (meta?.chart?.result?.[0]?.meta?.regularMarketPrice) {
-                        price = meta.chart.result[0].meta.regularMarketPrice;
-                        prevClose = meta.chart.result[0].meta.chartPreviousClose || meta.chart.result[0].meta.previousClose;
+                    } else if (meta?.regularMarketPrice) {
+                        price = meta.regularMarketPrice;
+                        prevClose = meta.chartPreviousClose || meta.previousClose;
                     }
                     if (price) {
                         results[ticker] = { price, prevClose };
