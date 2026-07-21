@@ -607,6 +607,7 @@ body {
             </select>
             <button class="btn" onclick="App.fetchAllPrices()" id="btnRefresh">🔄 시세 갱신</button>
             <button class="btn" onclick="App.openModal('importExport')">💾 백업</button>
+            <button class="btn" onclick="App.exportToExcel()" style="color:#00e8a2;border-color:#00e8a2;">⬇️ 엑셀 추출</button>
             <button class="btn" onclick="App.openModal('sync')" style="color:var(--accent-blue);border-color:var(--accent-blue);">☁️ 동기화</button>
             <span class="status-badge" id="syncStatusBadge"><span class="status-dot"></span>로컬 모드</span>
         </div>
@@ -1367,6 +1368,10 @@ const App = {
                     if (h) {
                         h.currentPrice = res.price;
                         if (res.prevClose) h.prevClose = res.prevClose;
+                        if (res.marketCap !== undefined) h.marketCap = res.marketCap;
+                        if (res.trailingPE !== undefined) h.trailingPE = res.trailingPE;
+                        if (res.priceToBook !== undefined) h.priceToBook = res.priceToBook;
+                        if (res.trailingEps !== undefined) h.trailingEps = res.trailingEps;
                     }
                 }
                 updated++;
@@ -1386,6 +1391,10 @@ const App = {
                     if (h) {
                         h.currentPrice = res.price;
                         if (res.prevClose) h.prevClose = res.prevClose;
+                        if (res.marketCap !== undefined) h.marketCap = res.marketCap;
+                        if (res.trailingPE !== undefined) h.trailingPE = res.trailingPE;
+                        if (res.priceToBook !== undefined) h.priceToBook = res.priceToBook;
+                        if (res.trailingEps !== undefined) h.trailingEps = res.trailingEps;
                     }
                 }
                 updated++;
@@ -1545,6 +1554,23 @@ const App = {
             const m = { US: ['🇺🇸 US','us'], JP: ['🇯🇵 JP','jp'], KR: ['🇰🇷 KR','kr'], ISA: ['🇰🇷 ISA','kr'] };
             const [label, cls] = m[market] || ['?',''];
             return `<span class="market-badge ${cls}">${label}</span>`;
+        },
+        largeNum(n, currency) {
+            if (!n || isNaN(n)) return '-';
+            if (currency === 'KRW') {
+                if (n >= 1e12) return (n / 1e12).toFixed(1) + '조';
+                if (n >= 1e8) return (n / 1e8).toFixed(1) + '억';
+                return (n / 10000).toFixed(0) + '만';
+            } else if (currency === 'USD') {
+                if (n >= 1e9) return '$' + (n / 1e9).toFixed(1) + 'B';
+                if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+                return '$' + n.toLocaleString();
+            } else {
+                return (n / 1e8).toFixed(1) + '억';
+            }
+        },
+        numStr(n) {
+            return (n && !isNaN(n) && n !== 0) ? Number(n).toFixed(2) : '-';
         }
     },
 
@@ -1747,7 +1773,11 @@ const App = {
                 }
             }
 
-            rows += `<tr>
+                const formattedPrice = currency === 'KRW'
+                    ? h.currentPrice.toLocaleString('ko-KR')
+                    : h.currentPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                rows += `<tr>
                 <td class="ticker">
                     ${this.fmt.marketBadge(market)}
                     <div>
@@ -1758,14 +1788,24 @@ const App = {
                 <td class="right">${h.shares}</td>
                 <td class="right">${this.fmt.price(h.avgCost, currency)}</td>
                 <td class="right">
-                    <input class="editable-price" type="number" step="${step}"
-                        value="${h.currentPrice}" data-pid="${pid}" data-hid="${h.id}"
-                        onchange="App.onPriceChange(this)">
+                    <input class="editable-price" type="text"
+                        value="${formattedPrice}" data-pid="${pid}" data-hid="${h.id}" data-cur="${currency}"
+                        onchange="App.onPriceChange(this)"
+                        onfocus="this.value = this.value.replace(/,/g, ''); this.select();"
+                        onblur="if(!isNaN(this.value) && this.value !== ''){ this.value = this.dataset.cur === 'KRW' ? Number(this.value).toLocaleString('ko-KR') : Number(this.value).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }">
                     ${deltaHtml}
                 </td>
                 <td class="right">${this.fmt.price(info.value, currency)}<br><span style="font-size:0.72rem;color:var(--text-tertiary);">${this.fmt.krw(info.valueKRW)}</span></td>
                 <td class="right ${this.fmt.pctClass(info.rate)}">${this.fmt.pct(info.rate)}<br><span style="font-size:0.72rem;">${this.fmt.price(info.pnl, currency)}</span></td>
-                <td style="font-size:0.78rem;color:var(--text-secondary);max-width:180px;">${h.note || '-'}
+                <td class="right" style="font-size:0.8rem;">
+                    ${this.fmt.largeNum(h.marketCap, currency)}<br>
+                    <span style="font-size:0.7rem;color:var(--text-secondary);">PER ${this.fmt.numStr(h.trailingPE)}</span>
+                </td>
+                <td class="right" style="font-size:0.8rem;">
+                    PBR ${this.fmt.numStr(h.priceToBook)}<br>
+                    <span style="font-size:0.7rem;color:var(--text-secondary);">EPS ${this.fmt.numStr(h.trailingEps)}</span>
+                </td>
+                <td style="font-size:0.78rem;color:var(--text-secondary);max-width:140px;">${h.note || '-'}
                     <button class="btn btn-sm btn-danger" style="margin-left:8px;padding:2px 6px;font-size:0.68rem;" onclick="App.deleteHolding('${pid}','${h.id}')">삭제</button>
                 </td>
             </tr>`;
@@ -1779,7 +1819,7 @@ const App = {
                 <thead><tr>
                     <th>종목</th><th class="right">수량</th><th class="right">매수 평단</th>
                     <th class="right">현재가</th><th class="right">평가금액</th>
-                    <th class="right">수익률</th><th>비고</th>
+                    <th class="right">수익률</th><th class="right">시총/PER</th><th class="right">PBR/EPS</th><th>비고</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
@@ -1992,7 +2032,8 @@ const App = {
     onPriceChange(input) {
         const pid = input.dataset.pid;
         const hid = input.dataset.hid;
-        const price = parseFloat(input.value) || 0;
+        const rawStr = input.value.replace(/,/g, ''); // 콤마 제거
+        const price = parseFloat(rawStr) || 0;
         const targetH = this.state.portfolios[pid]?.holdings.find(x => x.id === hid);
         if (targetH) {
             targetH.currentPrice = price;
@@ -2440,6 +2481,28 @@ const App = {
         a.click();
         URL.revokeObjectURL(url);
         this.showToast('📤 데이터 내보내기 완료', 'success');
+    },
+
+    async exportToExcel() {
+        this.showToast('⏳ 파이썬 서버에 엑셀 추출을 요청합니다. (약 3~5초 소요)...', 'info');
+        try {
+            const res = await fetch('http://127.0.0.1:5000/api/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(this.state),
+                signal: AbortSignal.timeout(30000)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.showToast('✅ 바탕화면에 엑셀이 추출되어 열렸습니다!', 'success');
+                    return;
+                }
+            }
+            throw new Error('파이썬 서버 응답 오류');
+        } catch (e) {
+            this.showToast('❌ 엑셀 추출 실패. 파이썬 서버(asset_server.py)가 켜져 있는지 확인해주세요.', 'error');
+        }
     },
 
     importData() {
